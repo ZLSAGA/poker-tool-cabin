@@ -42,7 +42,7 @@ export default function PlayingCard({ cardKey }) {
       backgroundColor: "white",
       borderRadius: "8px",
       boxShadow: "0 5px 12px rgba(0,0,0,0.3)",
-      position: "relative", // ▼ 四隅にパーツを絶対配置するための基準点
+      position: "relative",
       boxSizing: "border-box",
       fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
       fontWeight: "bold",
@@ -70,7 +70,7 @@ export default function PlayingCard({ cardKey }) {
         position: "absolute",
         top: "50%",
         left: "50%",
-        transform: "translate(-50%, -50%)", // 完全に真ん中へ配置
+        transform: "translate(-50%, -50%)",
         fontSize: "28px",
         lineHeight: "1"
       }}>
