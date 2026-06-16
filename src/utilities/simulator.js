@@ -1,3 +1,4 @@
+// src/utilities/simulator.js
 import { createDeck, filterDeck } from './card';
 import pokersolver from 'pokersolver';
 const { Hand } = pokersolver;
@@ -20,7 +21,6 @@ function runExactEnumeration(hand1, hand2, board) {
   hand2.forEach(c => allUsedCards.push(c));
   board.forEach(c => allUsedCards.push(c));
 
-  // 引数に「...」をつけずにそのまま渡す
   const remainingDeck = filterDeck(baseDeck, allUsedCards);
   const needCards = 5 - board.length;
 
@@ -28,20 +28,30 @@ function runExactEnumeration(hand1, hand2, board) {
   let p2Wins = 0;
   let ties = 0;
 
-  if (needCards === 1) {
+  // ▼ 【修正】リバーまで5枚すべて埋まっている場合の処理を新設
+  if (needCards === 0) {
+    const result = evaluateWinner(hand1, hand2, board);
+    if (result === 1) p1Wins++;
+    else if (result === 2) p2Wins++;
+    else ties++;
+  } 
+  // ▼ 【修正】オブジェクトではなく .key (文字列) を finalBoard に渡すよう修正
+  else if (needCards === 1) {
     for (let i = 0; i < remainingDeck.length; i++) {
-      const card1 = remainingDeck[i].key ? remainingDeck[i].key : remainingDeck[i];
-      const finalBoard = [...board, remainingDeck[i]];
+      const card1 = remainingDeck[i].key;
+      const finalBoard = [...board, card1];
       const result = evaluateWinner(hand1, hand2, finalBoard);
       if (result === 1) p1Wins++;
       else if (result === 2) p2Wins++;
       else ties++;
     }
-  } else if (needCards === 2) {
+  } 
+  // ▼ 【修正】オブジェクトではなく .key (文字列) を finalBoard に渡すよう修正
+  else if (needCards === 2) {
     for (let i = 0; i < remainingDeck.length; i++) {
       for (let j = i + 1; j < remainingDeck.length; j++) {
-        const card1 = remainingDeck[i].key ? remainingDeck[i].key : remainingDeck[i];
-        const card2 = remainingDeck[j].key ? remainingDeck[j].key : remainingDeck[j];
+        const card1 = remainingDeck[i].key;
+        const card2 = remainingDeck[j].key;
         const finalBoard = [...board, card1, card2];
         const result = evaluateWinner(hand1, hand2, finalBoard);
         if (result === 1) p1Wins++;
@@ -49,7 +59,8 @@ function runExactEnumeration(hand1, hand2, board) {
         else ties++;
       }
     }
-  } else if (needCards === 5) {
+  } 
+  else if (needCards === 5) {
     for (let i = 0; i < remainingDeck.length; i++) {
       for (let j = i + 1; j < remainingDeck.length; j++) {
         for (let k = j + 1; k < remainingDeck.length; k++) {
@@ -73,11 +84,10 @@ function runExactEnumeration(hand1, hand2, board) {
     }
   }
 
-
   const total = p1Wins + p2Wins + ties;
   return {
-    p1Equity: total > 0 ? ((p1Wins + (ties * 0.5)) / total) * 100 : 0,
-    p2Equity: total > 0 ? ((p2Wins + (ties * 0.5)) / total) * 100 : 0,
+    p1Equity: total > 0 ? ((p1Wins + ties * 0.5) / total) * 100 : 0,
+    p2Equity: total > 0 ? ((p2Wins + ties * 0.5) / total) * 100 : 0,
   };
 }
 
@@ -90,34 +100,19 @@ function runMonteCarlo(p1, p2, board, iterations) {
   const baseDeck = createDeck();
   const needCards = 5 - board.length;
 
-
   for (let i = 0; i < iterations; i++) {
-    let hand1;
-    if (p1.isRange) {
-      hand1 = p1.range[Math.floor(Math.random() * p1.range.length)];
-    } else {
-      hand1 = p1.hand;
-    }
-    let hand2;
-    if (p2.isRange) {
-      hand2 = p2.range[Math.floor(Math.random() * p2.range.length)];
-    } else {
-      hand2 = p2.hand;
-    }
-
+    let hand1 = p1.isRange ? p1.range[Math.floor(Math.random() * p1.range.length)] : p1.hand;
+    let hand2 = p2.isRange ? p2.range[Math.floor(Math.random() * p2.range.length)] : p2.hand;
 
     if (!hand1 || !hand2) return { p1Equity: 0, p2Equity: 0 };
 
-    // 3. カードの重複をチェック
     const usedCardKeys = [...hand1, ...hand2, ...board];
     const uniqueCards = new Set(usedCardKeys);
     
     if (uniqueCards.size !== usedCardKeys.length) {
-      // 重複があった場合は無効なシミュレーションなので、この回をやり直す
       i--;
       continue;
     }
-
 
     let finalBoard = [...board];
     if (needCards > 0) {
@@ -129,20 +124,17 @@ function runMonteCarlo(p1, p2, board, iterations) {
       }
     }
 
-
     const result = evaluateWinner(hand1, hand2, finalBoard);
     if (result === 1) p1Wins++;
     else if (result === 2) p2Wins++;
     else ties++;
   }
 
-
   return {
     p1Equity: ((p1Wins + ties * 0.5) / iterations) * 100,
     p2Equity: ((p2Wins + ties * 0.5) / iterations) * 100,
   };
 }
-
 
 function evaluateWinner(hand1, hand2, board) {
   const p1Cards = [...hand1, ...board];
@@ -153,18 +145,11 @@ function evaluateWinner(hand1, hand2, board) {
 
   const winners = Hand.winners([p1Hand, p2Hand]);
 
-  // 1. 勝者が2人（役の強さが完全に同じ）なら引き分け
   if (winners.length === 2) {
-    return 0; 
-  } 
-  
-  // 2. 勝者のカードの文字列と、p1のカードの文字列を比較する
-  // (オブジェクトの比較ではなく、文字列にすることでJavaScriptが正しく判定できるようになります)
-  if (winners[0].cards.toString() === p1Hand.cards.toString()) {
-    return 1; // Player 1 (AA) の勝ち
+    return 0; // 引き分け
+  } else if (winners[0] === p1Hand) {
+    return 1; // P1勝ち
   } else {
-    return 2; // Player 2 (KK) の勝ち
+    return 2; // P2勝ち
   }
 }
-
-
