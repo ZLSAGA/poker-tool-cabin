@@ -15,6 +15,7 @@
     "pokersolver": "^2.1.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-playing-cards": "^0.6.3",
     "recharts": "^3.8.1"
   },
   "devDependencies": {
