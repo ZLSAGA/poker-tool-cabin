@@ -89,10 +89,10 @@ export default function App() {
   const [p1Select, setP1Select] = useState("custom");
   const [p2Select, setP2Select] = useState("custom");
 
-  const [p1Hand, setP1Hand] = useState(["As", "Ah"]);
-  const [p2Hand, setP2Hand] = useState(["Ks", "Kh"]);
-  const [board, setBoard] = useState(["4h", "5s", "Tc", "", ""]);
-  const [activeSlot, setActiveSlot] = useState({ target: "board", index: 3 });
+  const [p1Hand, setP1Hand] = useState(["", ""]);
+  const [p2Hand, setP2Hand] = useState(["", ""]);
+  const [board, setBoard] = useState(["", "", "", "", ""]);
+  const [activeSlot, setActiveSlot] = useState({ target: "p1", index: 0 });
 
   const [history, setHistory] = useState([]);
   const [result, setResult] = useState(null);
@@ -256,24 +256,14 @@ export default function App() {
     let p1Data = getPlayerData(p1Select, p1Hand);
     let p2Data = getPlayerData(p2Select, p2Hand);
 
-    if (p1Data.isRange || p2Data.isRange) {
-      setCalcMethod(`モンテカルロ法 (10万回試行) - 残り: ${5 - currentBoard.length}枚`);
-    } else {
-      const patterns = currentBoard.length === 5 ? 1 : currentBoard.length === 4 ? 45 : currentBoard.length === 3 ? 990 : currentBoard.length === 2 ? 19380 : currentBoard.length === 1 ? 324630 : 2118760;
-      
-      if (patterns > 10000) {
-        setCalcMethod(`モンテカルロ法 (自動最適化: 10万回試行) - 全探索だと${patterns.toLocaleString()}通りのため`);
-        p1Data = { isRange: true, range: [p1Hand] };
-      } else {
-        setCalcMethod(`全探索 (${patterns}通りの組み合わせ)`);
-      }
-    }
-
+    // ▼ simulator.js 側で全て判定するため、ここでの複雑な分岐は不要になりました！
     const startTime = performance.now();
-    const equity = calculateEquity(p1Data, p2Data, currentBoard);
+    const equityResult = calculateEquity(p1Data, p2Data, currentBoard);
     const endTime = performance.now();
 
-    setResult(equity);
+    // simulator.js から返ってきた計算手法をそのままセット
+    setCalcMethod(equityResult.calcMethod);
+    setResult(equityResult);
     setTime(endTime - startTime);
   };
 
@@ -301,8 +291,19 @@ export default function App() {
   };
 
   return (
-    <div style={{ padding: "30px", fontFamily: "sans-serif", backgroundColor: "#f4f6f9", minHeight: "100vh" }}>
-      <h1 style={{ textAlign: "center", color: "#222", marginBottom: "5px" }}>ポーカー勝率シミュレータ</h1>
+    <div style={{ 
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "100vw",
+    minHeight: "100vh",
+    margin: 0,
+    padding: "20px", 
+    fontFamily: "sans-serif", 
+    backgroundColor: "#f4f6f9", 
+    boxSizing: "border-box" 
+  }}>
+      <h1 style={{ textAlign: "center", color: "#222", marginBottom: "5px", marginTop: "0px" }}>ポーカー勝率シミュレータ</h1>
       <p style={{ textAlign: "center", color: "#475569", fontWeight: "bold", fontSize: "14px", marginBottom: "30px" }}>
         💡 枠を選択（黄色くフォーカス）し、右側の52枚のカードマトリックスからクリックしてはめ込んでください。
       </p>
