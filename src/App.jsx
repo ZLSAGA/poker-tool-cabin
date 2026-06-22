@@ -8,7 +8,6 @@ import PlayingCard from "./components/PlayingCard";
 // ==========================================
 const RANKS = ['A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2'];
 
-// ボードのトランプ画像に合わせて「黒と赤」の標準2色に統一
 const SUITS = [
   { key: 's', symbol: '♠', color: 'black' }, // 黒 (Spade)
   { key: 'h', symbol: '♥', color: 'red' }, // 赤 (Heart)
@@ -99,6 +98,9 @@ export default function App() {
   const [time, setTime] = useState(null);
   const [calcMethod, setCalcMethod] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+
+  const [myRange, setMyRange] = useState([]);
+  const [isRangeModalOpen, setIsRangeModalOpen] = useState(false); // モーダルの開閉管理
 
   const usedCards = [
     ...(p1Select === "custom" ? p1Hand.filter(Boolean) : []),
@@ -232,8 +234,8 @@ export default function App() {
     if (selectValue === "strong") return { isRange: true, range: expandRange(RANGE_STRONG) };
     if (selectValue === "medium") return { isRange: true, range: expandRange(RANGE_MEDIUM) };
     if (selectValue === "weak") return { isRange: true, range: expandRange(RANGE_WEAK) };
-    // ▼ 【追加】anyが選択された場合は全組み合わせを返す
     if (selectValue === "any") return { isRange: true, range: getAnyRange() };
+    if (selectValue === "myRange") return { isRange: true, range: expandRange(myRange) };
     return { isRange: false, hand: customHand };
   };
 
@@ -245,11 +247,11 @@ export default function App() {
     const currentBoard = board.filter(c => c !== "");
 
     if (p1Select === "custom" && (p1Hand[0] === "" || p1Hand[1] === "")) {
-      setErrorMessage("⚠️ Player 1 のカードを2枚選んでください。");
+      setErrorMessage("Player 1 のカードを2枚選んでください。");
       return;
     }
     if (p2Select === "custom" && (p2Hand[0] === "" || p2Hand[1] === "")) {
-      setErrorMessage("⚠️ Player 2 のカードを2枚選んでください。");
+      setErrorMessage("Player 2 のカードを2枚選んでください。");
       return;
     }
 
@@ -287,34 +289,35 @@ export default function App() {
     if (val === "medium") return "標準";
     if (val === "weak") return "弱";
     if (val === "any") return "Any";
+    if (val === "myRange") return "マイ";
     return "";
   };
 
   return (
-    <div style={{ 
+    <div style={{
     position: "absolute",
     top: 0,
     left: 0,
     width: "100vw",
     minHeight: "100vh",
     margin: 0,
-    padding: "20px", 
-    fontFamily: "sans-serif", 
-    backgroundColor: "#f4f6f9", 
-    boxSizing: "border-box" 
+    padding: "20px",
+    fontFamily: "sans-serif",
+    backgroundColor: "#f4f6f9",
+    boxSizing: "border-box"
   }}>
       <h1 style={{ textAlign: "center", color: "#222", marginBottom: "5px", marginTop: "0px" }}>ポーカー勝率シミュレータ</h1>
       <p style={{ textAlign: "center", color: "#475569", fontWeight: "bold", fontSize: "14px", marginBottom: "30px" }}>
-        💡 枠を選択（黄色くフォーカス）し、右側の52枚のカードマトリックスからクリックしてはめ込んでください。
+        枠を選択（黄色くフォーカス）し、右側の52枚のカードマトリックスからクリックしてはめ込んでください。
       </p>
 
       <div style={{ display: "flex", gap: "25px", maxWidth: "1200px", margin: "0 auto", alignItems: "flex-start" }}>
-        
+
         {/* 【左カラム】シミュレータ＆計算コントロール */}
         <div style={{ flex: "1.2", minWidth: "550px" }}>
-          
+
           <div style={{ backgroundColor: "#155724", padding: "20px 25px", borderRadius: "15px", boxShadow: "0 10px 20px rgba(0,0,0,0.3)", color: "white", marginBottom: "25px" }}>
-            
+
             {/* コミュニティボード */}
             <div style={{ marginBottom: "25px", textAlign: "center" }}>
               <h3 style={{ borderBottom: "2px solid rgba(255,255,255,0.15)", paddingBottom: "6px", color: "#ffc107", marginTop: 0, fontSize: "13px", letterSpacing: "1px" }}>
@@ -351,7 +354,8 @@ export default function App() {
                   <option value="strong">レンジ: 強 (上位11%)</option>
                   <option value="medium">レンジ: 標準 (上位20%)</option>
                   <option value="weak">レンジ: 弱 (上位35%)</option>
-                  <option value="any">レンジ: Any (100%)</option> {/* ▼ 追加 */}
+                  <option value="any">レンジ: Any (100%)</option>
+                  <option value="myRange">マイレンジ (カスタム)</option>
                 </select>
                 <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginTop: "8px" }}>
                   {p1Select === "custom" ? (
@@ -377,7 +381,8 @@ export default function App() {
                   <option value="strong">レンジ: 強 (上位11%)</option>
                   <option value="medium">レンジ: 標準 (上位20%)</option>
                   <option value="weak">レンジ: 弱 (上位35%)</option>
-                  <option value="any">レンジ: Any (100%)</option> {/* ▼ 追加 */}
+                  <option value="any">レンジ: Any (100%)</option>
+                  <option value="myRange">マイレンジ (カスタム)</option>
                 </select>
                 <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginTop: "8px" }}>
                   {p2Select === "custom" ? (
@@ -410,6 +415,15 @@ export default function App() {
           </div>
         </div>
 
+        <div style={{ marginTop: "10px" }}>
+          <button
+            onClick={() => setIsRangeModalOpen(true)}
+            style={{ ...secondaryBtnStyle, padding: "8px 16px", fontSize: "13px", backgroundColor: "#e0f2fe", color: "#0369a1", border: "1px solid #bae6fd" }}
+          >
+            マイレンジを設定・編集する
+          </button>
+        </div>
+
         {/* 【右カラム】52枚のカード選択マトリックス */}
         <div style={{
           flex: "0.8",
@@ -424,15 +438,15 @@ export default function App() {
         }}>
           {/* コントロールヘッダー */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", borderBottom: "1px solid #e2e8f0", paddingBottom: "10px" }}>
-            <h4 style={{ margin: 0, color: "#334155", fontSize: "14px", fontWeight: "bold" }}>🃏 カードマトリックス</h4>
+            <h4 style={{ margin: 0, color: "#334155", fontSize: "14px", fontWeight: "bold" }}>カードマトリックス</h4>
             <div style={{ display: "flex", gap: "6px" }}>
-              <button 
-                onClick={handleUndo} 
-                disabled={history.length === 0} 
+              <button
+                onClick={handleUndo}
+                disabled={history.length === 0}
                 style={{
-                  ...secondaryBtnStyle, 
-                  backgroundColor: history.length === 0 ? "#f1f5f9" : "#e0f2fe", 
-                  color: history.length === 0 ? "#94a3b8" : "#0369a1", 
+                  ...secondaryBtnStyle,
+                  backgroundColor: history.length === 0 ? "#f1f5f9" : "#e0f2fe",
+                  color: history.length === 0 ? "#94a3b8" : "#0369a1",
                   border: history.length === 0 ? "1px solid #cbd5e1" : "1px solid #bae6fd"
                 }}
               >
@@ -446,7 +460,7 @@ export default function App() {
           {/* フォーカス状態のナビゲーション */}
           {activeSlot ? (
             <div style={{ fontSize: "12px", color: "#d97706", backgroundColor: "#fef3c7", padding: "6px 10px", borderRadius: "6px", marginBottom: "12px", fontWeight: "bold" }}>
-              🎯 選択中: {activeSlot.target === "board" ? `ボード (スロット${activeSlot.index + 1})` : `Player ${activeSlot.target === "p1" ? "1" : "2"} (${activeSlot.index + 1}枚目)`}
+              選択中: {activeSlot.target === "board" ? `ボード (スロット${activeSlot.index + 1})` : `Player ${activeSlot.target === "p1" ? "1" : "2"} (${activeSlot.index + 1}枚目)`}
             </div>
           ) : (
             <div style={{ fontSize: "12px", color: "#64748b", backgroundColor: "#f8fafc", padding: "6px 10px", borderRadius: "6px", marginBottom: "12px" }}>
@@ -461,11 +475,11 @@ export default function App() {
                 <div style={{ width: "20px", fontWeight: "bold", color: "#64748b", textAlign: "center", fontSize: "13px" }}>
                   {rank === "T" ? "10" : rank}
                 </div>
-                
+
                 {SUITS.map(suit => {
                   const cardKey = `${rank}${suit.key}`;
                   const isUsed = usedCards.includes(cardKey);
-                  
+
                   return (
                     <button
                       key={cardKey}
@@ -498,6 +512,96 @@ export default function App() {
 
         </div>
       </div>
+
+      {isRangeModalOpen && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh",
+          backgroundColor: "rgba(0,0,0,0.6)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: "white", padding: "25px", borderRadius: "12px",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.3)", maxWidth: "550px", width: "90%",
+            maxHeight: "90vh",
+            overflowY: "auto",
+            boxSizing: "border-box",
+            display: "flex",
+            flexDirection: "column"
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
+              <h3 style={{ margin: 0, color: "#1e293b" }}>マイレンジ編集 (13×13)</h3>
+              <button
+                onClick={() => setMyRange([])}
+                style={{ ...secondaryBtnStyle, backgroundColor: "#fee2e2", color: "#ef4444", border: "1px solid #fca5a5" }}
+              >
+                全解除
+              </button>
+            </div>
+
+            <p style={{ fontSize: "12px", color: "#64748b", marginTop: 0, marginBottom: "15px" }}>
+              ※ 右上＝スーテッド(s)、左下＝オフスーテッド(o)、対角線＝ポケットペア
+            </p>
+
+            {/* 13×13グリッドの描画 */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+              {RANKS.map((rowRank, rowIndex) => (
+                <div key={rowRank} style={{ display: "flex", gap: "3px" }}>
+                  {RANKS.map((colRank, colIndex) => {
+                    // ポーカーの13x13レンジ表記のロジック
+                    let handStr = "";
+                    if (rowIndex === colIndex) {
+                      handStr = rowRank + colRank; // ペア (AA, KK等)
+                    } else if (rowIndex < colIndex) {
+                      handStr = rowRank + colRank + "s"; // スーテッド (AKs等)
+                    } else {
+                      handStr = colRank + rowRank + "o"; // オフスーテッド (AKo等)
+                    }
+
+                    const isSelected = myRange.includes(handStr);
+
+                    return (
+                      <button
+                        key={handStr}
+                        onClick={() => {
+                          if (isSelected) {
+                            setMyRange(myRange.filter(h => h !== handStr));
+                          } else {
+                            setMyRange([...myRange, handStr]);
+                          }
+                        }}
+                        style={{
+                          flex: 1,
+                          aspectRatio: "1/1",
+                          fontSize: "10px",
+                          fontWeight: "bold",
+                          border: "1px solid #e2e8f0",
+                          borderRadius: "4px",
+                          cursor: "pointer",
+                          backgroundColor: rowIndex === colIndex ? (isSelected ? "#22c55e" : "#ffedd5") : // ペア
+                                           rowIndex < colIndex ? (isSelected ? "#3b82f6" : "#eff6ff") :   // スーテッド
+                                                                 (isSelected ? "#eab308" : "#fef9c3"),  // オフスーテッド
+                          color: isSelected ? "white" : "#334155",
+                          transition: "all 0.1s ease"
+                        }}
+                      >
+                        {handStr}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+
+            <div style={{ marginTop: "20px", textAlign: "right" }}>
+              <button
+                onClick={() => setIsRangeModalOpen(false)}
+                style={{ ...calcBtnStyle, padding: "10px 24px", fontSize: "14px", backgroundColor: "#1e293b" }}
+              >
+                保存して閉じる ({myRange.length} ハンド選択中)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
