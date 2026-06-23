@@ -560,7 +560,7 @@ export default function App() {
 
           {pot > 0 && call > 0 && (
             <div style={{ backgroundColor: "#f8fafc", padding: "14px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
-              <p style={{ margin: "0 0 6px 0", fontSize: "14px", color: "#334155" }}>
+              <p style={{ margin: "0 0 6px 0", fontSize: "12px", color: "#334155" }}>
                 必要勝率:<strong style={{ fontSize: "18px", color: "#0f172a" }}>{requiredEquity.toFixed(1)}%</strong>
               </p>
               {/* シミュレータ結果（勝率）との自動連動判定 */}
