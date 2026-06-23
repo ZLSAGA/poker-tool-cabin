@@ -9,7 +9,7 @@ export function calculateEquity(p1, p2, board) {
   // 1. 【モンテカルロ法】どちらかがレンジ指定、またはプリフロップ（残り5枚）の場合
   if (p1.isRange || p2.isRange || needCards === 5) {
     const result = runMonteCarlo(p1, p2, board, 100000); // 10万回試行
-    
+
     let reason = "";
     if (p1.isRange || p2.isRange) {
       reason = "レンジ指定のため";
@@ -53,7 +53,7 @@ function runExactEnumeration(hand1, hand2, board) {
     if (result === 1) p1Wins++;
     else if (result === 2) p2Wins++;
     else ties++;
-  } 
+  }
   else if (needCards === 1) {
     for (let i = 0; i < remainingDeck.length; i++) {
       const card1 = remainingDeck[i].key;
@@ -63,7 +63,7 @@ function runExactEnumeration(hand1, hand2, board) {
       else if (result === 2) p2Wins++;
       else ties++;
     }
-  } 
+  }
   else if (needCards === 2) {
     for (let i = 0; i < remainingDeck.length; i++) {
       for (let j = i + 1; j < remainingDeck.length; j++) {
@@ -76,7 +76,7 @@ function runExactEnumeration(hand1, hand2, board) {
         else ties++;
       }
     }
-  } 
+  }
   // ※ needCards === 5 (プリフロップ) の全探索は calculateEquity 側でブロックされるため実質通りませんが、安全のため残しています。
   else if (needCards === 5) {
     for (let i = 0; i < remainingDeck.length; i++) {
