@@ -101,6 +101,7 @@ export default function App() {
   const [isRangeModalOpen, setIsRangeModalOpen] = useState(false);
 
   const [outs, setOuts] = useState(null);
+  const [isLoading, setIsLoading] = useState(false); // ★ 計算中状態を管理するStateを追加
 
   const [potSize, setPotSize] = useState("7");
   const [callAmount, setCallAmount] = useState("5");
@@ -151,7 +152,7 @@ export default function App() {
   };
 
   const handleUndo = () => {
-    if (history.length === 0) return;
+    if (history.length === 0 || isLoading) return; // ★ 計算中はUndo不可に
     const previousState = history[history.length - 1];
     setHistory(prev => prev.slice(0, -1));
     setBoard(previousState.board);
@@ -162,7 +163,7 @@ export default function App() {
   };
 
   const handleSelectCard = (cardKey) => {
-    if (!activeSlot) return;
+    if (!activeSlot || isLoading) return; // ★ 計算中はカード選択不可に
     const { target, index } = activeSlot;
 
     if (usedCards.includes(cardKey)) {
@@ -209,7 +210,7 @@ export default function App() {
   };
 
   const handleClearSlot = () => {
-    if (!activeSlot) return;
+    if (!activeSlot || isLoading) return; // ★ 計算中は操作不可に
     const { target, index } = activeSlot;
 
     let currentCard = "";
@@ -248,6 +249,7 @@ export default function App() {
   };
 
   const handleClearAll = () => {
+    if (isLoading) return; // ★ 計算中は操作不可に
     const isAllEmpty = board.every(c => c === "") && p1Hand.every(c => c === "") && p2Hand.every(c => c === "");
     if (isAllEmpty) return;
 
@@ -289,52 +291,67 @@ export default function App() {
       return;
     }
 
-    let p1Data = getPlayerData(p1Select, p1Hand);
-    let p2Data = getPlayerData(p2Select, p2Hand);
+    // ① まずローディング状態をONにする
+    setIsLoading(true);
 
-    const startTime = performance.now();
-    const equityResult = calculateEquity(p1Data, p2Data, currentBoard);
-    const endTime = performance.now();
+    // ② setTimeoutを利用して、ブラウザが「計算中...」を描画する時間を一瞬（50ミリ秒）作る
+    setTimeout(() => {
+      try {
+        let p1Data = getPlayerData(p1Select, p1Hand);
+        let p2Data = getPlayerData(p2Select, p2Hand);
 
-    setCalcMethod(equityResult.calcMethod);
-    setResult(equityResult);
-    setTime(endTime - startTime);
+        const startTime = performance.now();
+        const equityResult = calculateEquity(p1Data, p2Data, currentBoard);
+        const endTime = performance.now();
 
-    if (p1Select === "custom" && p2Select === "custom" && (currentBoard.length === 3 || currentBoard.length === 4)) {
-      const allCards = [];
-      RANKS.forEach(r => SUITS.forEach(s => allCards.push(`${r}${s.key}`)));
-      const remainingCards = allCards.filter(c => !usedCards.includes(c));
+        setCalcMethod(equityResult.calcMethod);
+        setResult(equityResult);
+        setTime(endTime - startTime);
 
-      const p1OutsList = [];
-      const p2OutsList = [];
+        if (p1Select === "custom" && p2Select === "custom" && (currentBoard.length === 3 || currentBoard.length === 4)) {
+          const allCards = [];
+          RANKS.forEach(r => SUITS.forEach(s => allCards.push(`${r}${s.key}`)));
+          const remainingCards = allCards.filter(c => !usedCards.includes(c));
 
-      remainingCards.forEach(card => {
-        const nextBoard = [...currentBoard, card];
-        const testResult = calculateEquity(p1Data, p2Data, nextBoard);
+          const p1OutsList = [];
+          const p2OutsList = [];
 
-        if (testResult.p1Equity > testResult.p2Equity && equityResult.p1Equity <= equityResult.p2Equity) {
-          p1OutsList.push(card);
+          remainingCards.forEach(card => {
+            const nextBoard = [...currentBoard, card];
+            const testResult = calculateEquity(p1Data, p2Data, nextBoard);
+
+            if (testResult.p1Equity > testResult.p2Equity && equityResult.p1Equity <= equityResult.p2Equity) {
+              p1OutsList.push(card);
+            }
+            if (testResult.p2Equity > testResult.p1Equity && equityResult.p2Equity <= equityResult.p1Equity) {
+              p2OutsList.push(card);
+            }
+          });
+
+          setOuts({ p1: p1OutsList, p2: p2OutsList });
         }
-        if (testResult.p2Equity > testResult.p1Equity && equityResult.p2Equity <= equityResult.p1Equity) {
-          p2OutsList.push(card);
-        }
-      });
-
-      setOuts({ p1: p1OutsList, p2: p2OutsList });
-    }
+      } catch (err) {
+        setErrorMessage("計算中にエラーが発生しました。");
+        console.error(err);
+      } finally {
+        // ③ 計算が終わったら成否に関わらずローディングをOFFにする
+        setIsLoading(false);
+      }
+    }, 50);
   };
 
   const getSlotStyle = (target, index) => {
     const isActive = activeSlot && activeSlot.target === target && activeSlot.index === index;
     return {
-      cursor: "pointer",
+      cursor: isLoading ? "not-allowed" : "pointer",
       position: "relative",
       borderRadius: "8px",
       transition: "all 0.15s ease-in-out",
       outline: isActive ? "3px solid #ffc107" : "none",
       outlineOffset: isActive ? "2px" : "0px",
       boxShadow: isActive ? "0 0 15px rgba(255,193,7,0.6)" : "none",
-      transform: isActive ? "scale(1.04)" : "scale(1)"
+      transform: isActive ? "scale(1.04)" : "scale(1)",
+      opacity: isLoading ? 0.7 : 1
     };
   };
 
@@ -380,21 +397,21 @@ export default function App() {
 
               {/* 5枚のコミュニティカード */}
               <div style={{ display: "flex", justifyContent: "center", gap: "10px", alignItems: "center", marginTop: "12px" }}>
-                <div onClick={() => setActiveSlot({ target: "board", index: 0 })} style={getSlotStyle("board", 0)}>
+                <div onClick={() => !isLoading && setActiveSlot({ target: "board", index: 0 })} style={getSlotStyle("board", 0)}>
                   <PlayingCard cardKey={board[0]} /><span style={miniLabelStyle}>Flop 1</span>
                 </div>
-                <div onClick={() => setActiveSlot({ target: "board", index: 1 })} style={getSlotStyle("board", 1)}>
+                <div onClick={() => !isLoading && setActiveSlot({ target: "board", index: 1 })} style={getSlotStyle("board", 1)}>
                   <PlayingCard cardKey={board[1]} /><span style={miniLabelStyle}>Flop 2</span>
                 </div>
-                <div onClick={() => setActiveSlot({ target: "board", index: 2 })} style={getSlotStyle("board", 2)}>
+                <div onClick={() => !isLoading && setActiveSlot({ target: "board", index: 2 })} style={getSlotStyle("board", 2)}>
                   <PlayingCard cardKey={board[2]} /><span style={miniLabelStyle}>Flop 3</span>
                 </div>
                 <div style={dividerStyle} />
-                <div onClick={() => setActiveSlot({ target: "board", index: 3 })} style={getSlotStyle("board", 3)}>
+                <div onClick={() => !isLoading && setActiveSlot({ target: "board", index: 3 })} style={getSlotStyle("board", 3)}>
                   <PlayingCard cardKey={board[3]} /><span style={miniLabelStyle}>Turn</span>
                 </div>
                 <div style={dividerStyle} />
-                <div onClick={() => setActiveSlot({ target: "board", index: 4 })} style={getSlotStyle("board", 4)}>
+                <div onClick={() => !isLoading && setActiveSlot({ target: "board", index: 4 })} style={getSlotStyle("board", 4)}>
                   <PlayingCard cardKey={board[4]} /><span style={miniLabelStyle}>River</span>
                 </div>
               </div>
@@ -442,7 +459,7 @@ export default function App() {
               {/* Player 1 */}
               <div style={{ textAlign: "center", backgroundColor: "rgba(0,0,0,0.25)", padding: "12px", borderRadius: "10px", width: "49%" }}>
                 <h4 style={{ margin: "0 0 8px 0", fontSize: "14px" }}>Player 1</h4>
-                <select value={p1Select} onChange={(e) => setP1Select(e.target.value)} style={playerSelectStyle}>
+                <select disabled={isLoading} value={p1Select} onChange={(e) => setP1Select(e.target.value)} style={playerSelectStyle}>
                   <option value="custom">カスタムハンド (カード指定)</option>
                   <option value="strong">レンジ: 強 (上位11%)</option>
                   <option value="medium">レンジ: 標準 (上位20%)</option>
@@ -453,8 +470,8 @@ export default function App() {
                 <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginTop: "8px" }}>
                   {p1Select === "custom" ? (
                     <>
-                      <div onClick={() => setActiveSlot({ target: "p1", index: 0 })} style={getSlotStyle("p1", 0)}><PlayingCard cardKey={p1Hand[0]} /></div>
-                      <div onClick={() => setActiveSlot({ target: "p1", index: 1 })} style={getSlotStyle("p1", 1)}><PlayingCard cardKey={p1Hand[1]} /></div>
+                      <div onClick={() => !isLoading && setActiveSlot({ target: "p1", index: 0 })} style={getSlotStyle("p1", 0)}><PlayingCard cardKey={p1Hand[0]} /></div>
+                      <div onClick={() => !isLoading && setActiveSlot({ target: "p1", index: 1 })} style={getSlotStyle("p1", 1)}><PlayingCard cardKey={p1Hand[1]} /></div>
                     </>
                   ) : (
                     <>
@@ -464,12 +481,13 @@ export default function App() {
                   )}
                 </div>
                 {result && <div style={{ marginTop: "12px", fontSize: "24px", fontWeight: "bold", color: "#66b0ff" }}>{result.p1Equity.toFixed(2)} %</div>}
+                {isLoading && <div style={{ marginTop: "12px", fontSize: "14px", color: "#cbd5e1", fontStyle: "italic" }}>計算中...</div>}
               </div>
 
               {/* Player 2 */}
               <div style={{ textAlign: "center", backgroundColor: "rgba(0,0,0,0.25)", padding: "12px", borderRadius: "10px", width: "49%" }}>
                 <h4 style={{ margin: "0 0 8px 0", fontSize: "14px" }}>Player 2</h4>
-                <select value={p2Select} onChange={(e) => setP2Select(e.target.value)} style={playerSelectStyle}>
+                <select disabled={isLoading} value={p2Select} onChange={(e) => setP2Select(e.target.value)} style={playerSelectStyle}>
                   <option value="custom">カスタムハンド (カード指定)</option>
                   <option value="strong">レンジ: 強 (上位11%)</option>
                   <option value="medium">レンジ: 標準 (上位20%)</option>
@@ -480,8 +498,8 @@ export default function App() {
                 <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginTop: "8px" }}>
                   {p2Select === "custom" ? (
                     <>
-                      <div onClick={() => setActiveSlot({ target: "p2", index: 0 })} style={getSlotStyle("p2", 0)}><PlayingCard cardKey={p2Hand[0]} /></div>
-                      <div onClick={() => setActiveSlot({ target: "p2", index: 1 })} style={getSlotStyle("p2", 1)}><PlayingCard cardKey={p2Hand[1]} /></div>
+                      <div onClick={() => !isLoading && setActiveSlot({ target: "p2", index: 0 })} style={getSlotStyle("p2", 0)}><PlayingCard cardKey={p2Hand[0]} /></div>
+                      <div onClick={() => !isLoading && setActiveSlot({ target: "p2", index: 1 })} style={getSlotStyle("p2", 1)}><PlayingCard cardKey={p2Hand[1]} /></div>
                     </>
                   ) : (
                     <>
@@ -491,6 +509,7 @@ export default function App() {
                   )}
                 </div>
                 {result && <div style={{ marginTop: "12px", fontSize: "24px", fontWeight: "bold", color: "#ff6b6b" }}>{result.p2Equity.toFixed(2)} %</div>}
+                {isLoading && <div style={{ marginTop: "12px", fontSize: "14px", color: "#cbd5e1", fontStyle: "italic" }}>計算中...</div>}
               </div>
             </div>
           </div>
@@ -498,18 +517,31 @@ export default function App() {
           {/* 計算ボタン・結果表示エリア */}
           {errorMessage && <div style={{ fontWeight: "bold", color: "#d9534f", textAlign: "center", marginBottom: "15px" }}>{errorMessage}</div>}
           <div style={{ textAlign: "center" }}>
-            <button onClick={handleCalculate} style={calcBtnStyle}>このシチュエーションの勝率を計算する</button>
+            {/* ★ isLoadingのときはボタンの背景色を変え、文字を「計算中...」に変更、連打防止用にdisabled化 */}
+            <button
+              onClick={handleCalculate}
+              disabled={isLoading}
+              style={{
+                ...calcBtnStyle,
+                backgroundColor: isLoading ? "#64748b" : "#2563eb",
+                cursor: isLoading ? "not-allowed" : "pointer",
+                boxShadow: isLoading ? "none" : calcBtnStyle.boxShadow
+              }}
+            >
+              {isLoading ? "確率を計算しています..." : "このシチュエーションの勝率を計算する"}
+            </button>
 
             <div style={{ marginTop: "15px" }}>
               <button
+                disabled={isLoading}
                 onClick={() => setIsRangeModalOpen(true)}
-                style={{ ...secondaryBtnStyle, padding: "8px 16px", fontSize: "13px", backgroundColor: "#e0f2fe", color: "#0369a1", border: "1px solid #bae6fd" }}
+                style={{ ...secondaryBtnStyle, padding: "8px 16px", fontSize: "13px", backgroundColor: "#e0f2fe", color: "#0369a1", border: "1px solid #bae6fd", cursor: isLoading ? "not-allowed" : "pointer" }}
               >
                 マイレンジを設定・編集する
               </button>
             </div>
 
-            {time !== null && (
+            {time !== null && !isLoading && (
               <div style={{ marginTop: "15px", color: "#444", fontSize: "13px", backgroundColor: "#fff", padding: "12px", borderRadius: "8px", border: "1px solid #e2e8f0", display: "inline-block" }}>
                 <p style={{ margin: "3px 0" }}>計算手法: <strong>{calcMethod}</strong></p>
                 <p style={{ margin: "3px 0" }}>処理時間: <strong>{time.toFixed(1)} ミリ秒</strong></p>
@@ -518,7 +550,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* ポットオッズ＆必要勝率 計算機 */}
+        {/* 必要勝率計算機 */}
         <div style={{
           marginTop: "25px",
           backgroundColor: "white",
@@ -538,6 +570,7 @@ export default function App() {
               </label>
               <input
                 type="number"
+                disabled={isLoading}
                 value={potSize}
                 onChange={(e) => setPotSize(e.target.value)}
                 placeholder="7"
@@ -550,6 +583,7 @@ export default function App() {
               </label>
               <input
                 type="number"
+                disabled={isLoading}
                 value={callAmount}
                 onChange={(e) => setCallAmount(e.target.value)}
                 placeholder="5"
@@ -564,7 +598,7 @@ export default function App() {
                 必要勝率:<strong style={{ fontSize: "18px", color: "#0f172a" }}>{requiredEquity.toFixed(1)}%</strong>
               </p>
               {/* シミュレータ結果（勝率）との自動連動判定 */}
-              {result && (
+              {result && !isLoading && (
                 <div style={{ marginTop: "12px", paddingTop: "12px", borderTop: "1px dashed #cbd5e1" }}>
                   <div style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "13px" }}>
                     <div>
@@ -600,25 +634,27 @@ export default function App() {
           boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
           border: "1px solid #e2e8f0",
           position: "sticky",
-          top: "20px"
+          top: "20px",
+          opacity: isLoading ? 0.6 : 1 // ★ 計算中は薄くして操作不可感を出す
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", borderBottom: "1px solid #e2e8f0", paddingBottom: "10px" }}>
             <h4 style={{ margin: 0, color: "#334155", fontSize: "14px", fontWeight: "bold" }}>カードマトリックス</h4>
             <div style={{ display: "flex", gap: "6px" }}>
               <button
                 onClick={handleUndo}
-                disabled={history.length === 0}
+                disabled={history.length === 0 || isLoading}
                 style={{
                   ...secondaryBtnStyle,
-                  backgroundColor: history.length === 0 ? "#f1f5f9" : "#e0f2fe",
-                  color: history.length === 0 ? "#94a3b8" : "#0369a1",
-                  border: history.length === 0 ? "1px solid #cbd5e1" : "1px solid #bae6fd"
+                  backgroundColor: (history.length === 0 || isLoading) ? "#f1f5f9" : "#e0f2fe",
+                  color: (history.length === 0 || isLoading) ? "#94a3b8" : "#0369a1",
+                  border: (history.length === 0 || isLoading) ? "1px solid #cbd5e1" : "1px solid #bae6fd",
+                  cursor: isLoading ? "not-allowed" : "pointer"
                 }}
               >
                 戻る ({history.length})
               </button>
-              <button onClick={handleClearSlot} disabled={!activeSlot} style={secondaryBtnStyle}>枠を空に</button>
-              <button onClick={handleClearAll} style={{...secondaryBtnStyle, backgroundColor: "#fee2e2", color: "#ef4444", border: "1px solid #fca5a5"}}>全消去</button>
+              <button onClick={handleClearSlot} disabled={!activeSlot || isLoading} style={{ ...secondaryBtnStyle, cursor: isLoading ? "not-allowed" : "pointer" }}>枠を空に</button>
+              <button onClick={handleClearAll} disabled={isLoading} style={{...secondaryBtnStyle, backgroundColor: "#fee2e2", color: "#ef4444", border: "1px solid #fca5a5", cursor: isLoading ? "not-allowed" : "pointer"}}>全消去</button>
             </div>
           </div>
 
@@ -647,7 +683,7 @@ export default function App() {
                     <button
                       key={cardKey}
                       onClick={() => handleSelectCard(cardKey)}
-                      disabled={isUsed}
+                      disabled={isUsed || isLoading}
                       style={{
                         flex: 1,
                         padding: "7px 0",
@@ -657,13 +693,13 @@ export default function App() {
                         border: "1px solid #cbd5e1",
                         backgroundColor: isUsed ? "#e2e8f0" : "white",
                         color: isUsed ? "#94a3b8" : suit.color,
-                        cursor: isUsed ? "not-allowed" : "pointer",
+                        cursor: (isUsed || isLoading) ? "not-allowed" : "pointer",
                         transition: "all 0.1s ease",
                         boxShadow: isUsed ? "none" : "0 1px 3px rgba(0,0,0,0.05)",
                         textDecoration: isUsed ? "line-through" : "none"
                       }}
-                      onMouseEnter={(e) => { if (!isUsed) e.currentTarget.style.backgroundColor = "#f1f5f9"; }}
-                      onMouseLeave={(e) => { if (!isUsed) e.currentTarget.style.backgroundColor = "white"; }}
+                      onMouseEnter={(e) => { if (!isUsed && !isLoading) e.currentTarget.style.backgroundColor = "#f1f5f9"; }}
+                      onMouseLeave={(e) => { if (!isUsed && !isLoading) e.currentTarget.style.backgroundColor = "white"; }}
                     >
                       {suit.symbol}{rank === "T" ? "10" : rank}
                     </button>
