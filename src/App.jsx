@@ -101,7 +101,7 @@ export default function App() {
   const [isRangeModalOpen, setIsRangeModalOpen] = useState(false);
 
   const [outs, setOuts] = useState(null);
-  const [isLoading, setIsLoading] = useState(false); // ★ 計算中状態を管理するStateを追加
+  const [isLoading, setIsLoading] = useState(false);
 
   const [potSize, setPotSize] = useState("7");
   const [callAmount, setCallAmount] = useState("5");
@@ -117,7 +117,6 @@ export default function App() {
     ...board.filter(Boolean)
   ];
 
-  // アウツの個別カードを描画するヘルパー関数
   const renderOutCard = (cardKey) => {
     const rank = cardKey[0] === "T" ? "10" : cardKey[0];
     const suitKey = cardKey[1];
@@ -152,7 +151,7 @@ export default function App() {
   };
 
   const handleUndo = () => {
-    if (history.length === 0 || isLoading) return; // ★ 計算中はUndo不可に
+    if (history.length === 0 || isLoading) return; 
     const previousState = history[history.length - 1];
     setHistory(prev => prev.slice(0, -1));
     setBoard(previousState.board);
@@ -163,7 +162,7 @@ export default function App() {
   };
 
   const handleSelectCard = (cardKey) => {
-    if (!activeSlot || isLoading) return; // ★ 計算中はカード選択不可に
+    if (!activeSlot || isLoading) return; 
     const { target, index } = activeSlot;
 
     if (usedCards.includes(cardKey)) {
@@ -210,7 +209,7 @@ export default function App() {
   };
 
   const handleClearSlot = () => {
-    if (!activeSlot || isLoading) return; // ★ 計算中は操作不可に
+    if (!activeSlot || isLoading) return;
     const { target, index } = activeSlot;
 
     let currentCard = "";
@@ -249,7 +248,7 @@ export default function App() {
   };
 
   const handleClearAll = () => {
-    if (isLoading) return; // ★ 計算中は操作不可に
+    if (isLoading) return;
     const isAllEmpty = board.every(c => c === "") && p1Hand.every(c => c === "") && p2Hand.every(c => c === "");
     if (isAllEmpty) return;
 
@@ -291,10 +290,8 @@ export default function App() {
       return;
     }
 
-    // ① まずローディング状態をONにする
     setIsLoading(true);
 
-    // ② setTimeoutを利用して、ブラウザが「計算中...」を描画する時間を一瞬（50ミリ秒）作る
     setTimeout(() => {
       try {
         let p1Data = getPlayerData(p1Select, p1Hand);
@@ -334,7 +331,6 @@ export default function App() {
         setErrorMessage("計算中にエラーが発生しました。");
         console.error(err);
       } finally {
-        // ③ 計算が終わったら成否に関わらずローディングをOFFにする
         setIsLoading(false);
       }
     }, 50);
@@ -366,10 +362,10 @@ export default function App() {
 
   return (
     <div style={{
-      position: "absolute",
+      position: "relative",
       top: 0,
       left: 0,
-      width: "100vw",
+      width: "100%",
       minHeight: "100vh",
       margin: 0,
       padding: "20px",
@@ -382,7 +378,8 @@ export default function App() {
         枠を選択し、右側の52枚のカードマトリックスからクリックしてはめ込んでください。
       </p>
 
-      <div style={{ display: "flex", gap: "25px", maxWidth: "1200px", margin: "0 auto", alignItems: "flex-start" }}>
+      {/* メインコンテナ: flexWrap: "wrap" を指定してレスポンシブ化 */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "25px", maxWidth: "1200px", margin: "0 auto", alignItems: "flex-start" }}>
 
         {/* 【左カラム】シミュレータ＆計算コントロール */}
         <div style={{ flex: "1.2", minWidth: "550px" }}>
@@ -517,7 +514,6 @@ export default function App() {
           {/* 計算ボタン・結果表示エリア */}
           {errorMessage && <div style={{ fontWeight: "bold", color: "#d9534f", textAlign: "center", marginBottom: "15px" }}>{errorMessage}</div>}
           <div style={{ textAlign: "center" }}>
-            {/* ★ isLoadingのときはボタンの背景色を変え、文字を「計算中...」に変更、連打防止用にdisabled化 */}
             <button
               onClick={handleCalculate}
               disabled={isLoading}
@@ -548,83 +544,83 @@ export default function App() {
               </div>
             )}
           </div>
-        </div>
 
-        {/* 必要勝率計算機 */}
-        <div style={{
-          marginTop: "25px",
-          backgroundColor: "white",
-          padding: "20px",
-          borderRadius: "12px",
-          boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-          border: "1px solid #e2e8f0",
-          textAlign: "left"
-        }}>
-          <h3 style={{ margin: "0 0 15px 0", color: "#1e293b", fontSize: "15px", borderBottom: "2px solid #f1f5f9", paddingBottom: "8px" }}>
-            必要勝率計算機
-          </h3>
-          <div style={{ display: "flex", gap: "15px", marginBottom: "15px" }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ display: "block", fontSize: "12px", color: "#64748b", fontWeight: "bold", marginBottom: "6px" }}>
-                POT
-              </label>
-              <input
-                type="number"
-                disabled={isLoading}
-                value={potSize}
-                onChange={(e) => setPotSize(e.target.value)}
-                placeholder="7"
-                style={inputStyle}
-              />
+          {/* 必要勝率計算機 (★ 左カラムの下部に移動しました) */}
+          <div style={{
+            marginTop: "25px",
+            backgroundColor: "white",
+            padding: "20px",
+            borderRadius: "12px",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+            border: "1px solid #e2e8f0",
+            textAlign: "left"
+          }}>
+            <h3 style={{ margin: "0 0 15px 0", color: "#1e293b", fontSize: "15px", borderBottom: "2px solid #f1f5f9", paddingBottom: "8px" }}>
+              必要勝率計算機
+            </h3>
+            <div style={{ display: "flex", gap: "15px", marginBottom: "15px" }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: "block", fontSize: "12px", color: "#64748b", fontWeight: "bold", marginBottom: "6px" }}>
+                  POT
+                </label>
+                <input
+                  type="number"
+                  disabled={isLoading}
+                  value={potSize}
+                  onChange={(e) => setPotSize(e.target.value)}
+                  placeholder="7"
+                  style={inputStyle}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: "block", fontSize: "12px", color: "#64748b", fontWeight: "bold", marginBottom: "6px" }}>
+                  To call
+                </label>
+                <input
+                  type="number"
+                  disabled={isLoading}
+                  value={callAmount}
+                  onChange={(e) => setCallAmount(e.target.value)}
+                  placeholder="5"
+                  style={inputStyle}
+                />
+              </div>
             </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ display: "block", fontSize: "12px", color: "#64748b", fontWeight: "bold", marginBottom: "6px" }}>
-                To call
-              </label>
-              <input
-                type="number"
-                disabled={isLoading}
-                value={callAmount}
-                onChange={(e) => setCallAmount(e.target.value)}
-                placeholder="5"
-                style={inputStyle}
-              />
-            </div>
-          </div>
 
-          {pot > 0 && call > 0 && (
-            <div style={{ backgroundColor: "#f8fafc", padding: "14px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
-              <p style={{ margin: "0 0 6px 0", fontSize: "12px", color: "#334155" }}>
-                必要勝率:<strong style={{ fontSize: "18px", color: "#0f172a" }}>{requiredEquity.toFixed(1)}%</strong>
-              </p>
-              {/* シミュレータ結果（勝率）との自動連動判定 */}
-              {result && !isLoading && (
-                <div style={{ marginTop: "12px", paddingTop: "12px", borderTop: "1px dashed #cbd5e1" }}>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "13px" }}>
-                    <div>
-                      <span style={{ fontWeight: "bold", color: "#3b82f6" }}>Player 1:</span> 現勝率 {result.p1Equity.toFixed(1)}%
-                      {result.p1Equity >= requiredEquity ? (
-                        <span style={{ color: "#16a34a", fontWeight: "bold", marginLeft: "8px" }}>+EV</span>
-                      ) : (
-                        <span style={{ color: "#dc2626", fontWeight: "bold", marginLeft: "8px" }}>-EV</span>
-                      )}
-                    </div>
-                    <div>
-                      <span style={{ fontWeight: "bold", color: "#ef4444" }}>Player 2:</span> 現勝率 {result.p2Equity.toFixed(1)}%
-                      {result.p2Equity >= requiredEquity ? (
-                        <span style={{ color: "#16a34a", fontWeight: "bold", marginLeft: "8px" }}>+EV</span>
-                      ) : (
-                        <span style={{ color: "#dc2626", fontWeight: "bold", marginLeft: "8px" }}>-EV</span>
-                      )}
+            {pot > 0 && call > 0 && (
+              <div style={{ backgroundColor: "#f8fafc", padding: "14px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                <p style={{ margin: "0 0 6px 0", fontSize: "12px", color: "#334155" }}>
+                  必要勝率:<strong style={{ fontSize: "18px", color: "#0f172a" }}>{requiredEquity.toFixed(1)}%</strong>
+                </p>
+                {result && !isLoading && (
+                  <div style={{ marginTop: "12px", paddingTop: "12px", borderTop: "1px dashed #cbd5e1" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "13px" }}>
+                      <div>
+                        <span style={{ fontWeight: "bold", color: "#3b82f6" }}>Player 1:</span> 現勝率 {result.p1Equity.toFixed(1)}%
+                        {result.p1Equity >= requiredEquity ? (
+                          <span style={{ color: "#16a34a", fontWeight: "bold", marginLeft: "8px" }}>+EV</span>
+                        ) : (
+                          <span style={{ color: "#dc2626", fontWeight: "bold", marginLeft: "8px" }}>-EV</span>
+                        )}
+                      </div>
+                      <div>
+                        <span style={{ fontWeight: "bold", color: "#ef4444" }}>Player 2:</span> 現勝率 {result.p2Equity.toFixed(1)}%
+                        {result.p2Equity >= requiredEquity ? (
+                          <span style={{ color: "#16a34a", fontWeight: "bold", marginLeft: "8px" }}>+EV</span>
+                        ) : (
+                          <span style={{ color: "#dc2626", fontWeight: "bold", marginLeft: "8px" }}>-EV</span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
-          )}
+                )}
+              </div>
+            )}
+          </div>
+
         </div>
 
-        {/* 【右カラム】52枚のカード選択マトリックス */}
+        {/* 【右カラム】52枚のカード選択マトリックス (★ ボードの真横に並ぶ形を維持) */}
         <div style={{
           flex: "0.8",
           minWidth: "380px",
@@ -635,7 +631,8 @@ export default function App() {
           border: "1px solid #e2e8f0",
           position: "sticky",
           top: "20px",
-          opacity: isLoading ? 0.6 : 1 // ★ 計算中は薄くして操作不可感を出す
+          opacity: isLoading ? 0.6 : 1,
+          overflowX: "auto" // ★ 380px以下の超極小画面でもハート以降が切れないようにする保険
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", borderBottom: "1px solid #e2e8f0", paddingBottom: "10px" }}>
             <h4 style={{ margin: 0, color: "#334155", fontSize: "14px", fontWeight: "bold" }}>カードマトリックス</h4>
@@ -807,7 +804,7 @@ export default function App() {
 }
 
 // ==========================================
-// 3. スタイル定数の定義（コード内未定義分の補完）
+// 3. スタイル定数の定義
 // ==========================================
 const miniLabelStyle = {
   display: "block",
