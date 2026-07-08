@@ -2,26 +2,32 @@
 import React from "react";
 
 /**
- * ポーカーカードをCSSで再現したコンポーネント（未選択 "?" 対応版）
+ * レスポンシブ対応版：ポーカーカードコンポーネント
  */
 export default function PlayingCard({ cardKey }) {
-  // ▼ カードが未選択（空文字列など）の場合は「？」マークの空枠カードを表示
+  // スタイル共通設定：コンテナの幅に対して相対的にサイズを決める単位 (cqi) を使用
+  const cardBaseStyle = {
+    width: "100%",
+    height: "100%",
+    borderRadius: "8cqi", // 幅の8%を角丸に
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    userSelect: "none",
+    boxSizing: "border-box",
+    position: "relative",
+  };
+
+  // ▼ 未選択（空文字列など）の場合
   if (!cardKey || cardKey === "") {
     return (
       <div style={{
-        width: "75px",
-        height: "110px",
-        backgroundColor: "#e9ecef", // 薄いグレー
-        borderRadius: "8px",
-        boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        border: "2px dashed #cbd5e1", // おしゃれな点線枠
+        ...cardBaseStyle,
+        backgroundColor: "#f8fafc",
+        border: "2px dashed #cbd5e1",
         color: "#94a3b8",
         fontWeight: "bold",
-        fontSize: "28px",
-        userSelect: "none"
+        fontSize: "40cqi", // 枠の幅に合わせて「？」も伸縮
       }}>
         ?
       </div>
@@ -36,43 +42,59 @@ export default function PlayingCard({ cardKey }) {
   let color = "#212529";
 
   switch (suitInput) {
-    case "h": suitSymbol = "♥"; color = "red"; break;
-    case "d": suitSymbol = "♦"; color = "blue"; break;
-    case "c": suitSymbol = "♣"; color = "green"; break;
-    case "s": suitSymbol = "♠"; color = "black"; break;
+    case "h": suitSymbol = "♥"; color = "#e11d48"; break; // 赤
+    case "d": suitSymbol = "♦"; color = "#2563eb"; break; // 青
+    case "c": suitSymbol = "♣"; color = "#16a34a"; break; // 緑
+    case "s": suitSymbol = "♠"; color = "#1a1a1a"; break; // 黒
     default: break;
   }
 
   return (
     <div style={{
-      width: "75px",
-      height: "110px",
+      ...cardBaseStyle,
       backgroundColor: "white",
-      borderRadius: "8px",
-      boxShadow: "0 5px 12px rgba(0,0,0,0.3)",
-      position: "relative",
-      boxSizing: "border-box",
-      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-      fontWeight: "bold",
+      boxShadow: "0 4cqi 10cqi rgba(0,0,0,0.2)",
       color: color,
-      userSelect: "none",
-      border: "1px solid #ccc"
+      border: "1px solid #cbd5e1",
+      fontFamily: "sans-serif",
+      fontWeight: "bold",
     }}>
       {/* 左上の数字とマーク */}
-      <div style={{ position: "absolute", top: "6px", left: "8px", display: "flex", flexDirection: "column", alignItems: "center", lineHeight: "1.0", fontSize: "16px" }}>
-        <span>{rank}</span>
-        <span style={{ fontSize: "12px", marginTop: "1px" }}>{suitSymbol}</span>
+      <div style={{ 
+        position: "absolute", 
+        top: "6cqi", 
+        left: "8cqi", 
+        display: "flex", 
+        flexDirection: "column", 
+        alignItems: "center", 
+        lineHeight: "0.9" 
+      }}>
+        <span style={{ fontSize: "22cqi" }}>{rank}</span>
+        <span style={{ fontSize: "16cqi" }}>{suitSymbol}</span>
       </div>
       
       {/* 中央の大きなマーク */}
-      <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", fontSize: "28px", lineHeight: "1" }}>
+      <div style={{ 
+        fontSize: "45cqi", 
+        lineHeight: "1",
+        opacity: 0.9 
+      }}>
         {suitSymbol}
       </div>
       
       {/* 右下の逆向きの数字とマーク */}
-      <div style={{ position: "absolute", bottom: "6px", right: "8px", display: "flex", flexDirection: "column", alignItems: "center", lineHeight: "1.0", fontSize: "16px", transform: "rotate(180deg)" }}>
-        <span>{rank}</span>
-        <span style={{ fontSize: "12px", marginTop: "1px" }}>{suitSymbol}</span>
+      <div style={{ 
+        position: "absolute", 
+        bottom: "6cqi", 
+        right: "8cqi", 
+        display: "flex", 
+        flexDirection: "column", 
+        alignItems: "center", 
+        lineHeight: "0.9", 
+        transform: "rotate(180deg)" 
+      }}>
+        <span style={{ fontSize: "22cqi" }}>{rank}</span>
+        <span style={{ fontSize: "16cqi" }}>{suitSymbol}</span>
       </div>
     </div>
   );

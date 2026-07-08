@@ -8,13 +8,12 @@ import PlayingCard from "./components/PlayingCard";
 const RANKS = ['A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2'];
 
 const SUITS = [
-  { key: 's', symbol: '♠', color: 'black' }, // 黒 (Spade)
-  { key: 'h', symbol: '♥', color: 'red' },   // 赤 (Heart)
-  { key: 'd', symbol: '♦', color: 'blue' },  // 青 (Diamond)
-  { key: 'c', symbol: '♣', color: 'green' }  // 緑 (Club)
+  { key: 's', symbol: '♠', color: 'black' },
+  { key: 'h', symbol: '♥', color: 'red' },
+  { key: 'd', symbol: '♦', color: 'blue' },
+  { key: 'c', symbol: '♣', color: 'green' }
 ];
 
-// レンジ定義
 const RANGE_STRONG = ["AA", "KK", "QQ", "JJ", "TT", "99", "88", "AKs", "AQs", "AJs", "ATs", "KQs", "AKo", "AQo"];
 const RANGE_MEDIUM = [...RANGE_STRONG, "77", "66", "55", "KJs", "QJs", "JTs", "T9s", "98s", "AJo", "ATo", "KQo"];
 const RANGE_WEAK = [...RANGE_MEDIUM, "44", "33", "22", "A9s", "A8s", "A7s", "A5s", "KTs", "QTs", "J9s", "87s", "76s", "A9o", "KTo", "QTo", "JTo"];
@@ -57,22 +56,26 @@ function getAnyRange() {
   return combos;
 }
 
+// レンジ選択時のプレースホルダー（裏面や文字のカード）
 function RangeCardPlaceholder({ label }) {
   return (
-    <div style={{
-      width: "75px",
-      height: "110px",
+    <div className="card-slot" style={{
+      width: "100%",
+      maxWidth: "75px",
+      minWidth: "40px",
+      aspectRatio: "3 / 4.2",
       backgroundColor: "#2c3e50",
-      borderRadius: "8px",
-      boxShadow: "0 5px 12px rgba(0,0,0,0.3)",
+      borderRadius: "6cqi",
+      boxShadow: "0 3px 8px rgba(0,0,0,0.3)",
       display: "flex",
       justifyContent: "center",
       alignItems: "center",
       border: "2px solid #ecf0f1",
       color: "white",
       fontWeight: "bold",
-      fontSize: "18px",
-      userSelect: "none"
+      fontSize: "22cqi", // 幅に対して可変
+      userSelect: "none",
+      boxSizing: "border-box"
     }}>
       {label}
     </div>
@@ -338,16 +341,31 @@ export default function App() {
 
   const getSlotStyle = (target, index) => {
     const isActive = activeSlot && activeSlot.target === target && activeSlot.index === index;
+    
+    // アスペクト比を固定し、親要素に合わせてレスポンシブに伸縮する
     return {
+      width: "100%",
+      maxWidth: target === "board" ? "65px" : "75px",
+      minWidth: "40px",
+      aspectRatio: "3 / 4.2", // ポーカーカードの標準比率
       cursor: isLoading ? "not-allowed" : "pointer",
       position: "relative",
       borderRadius: "8px",
       transition: "all 0.15s ease-in-out",
+      
+      // containerTypeを指定し、内部のPlayingCardでcqi単位を使えるようにする
+      containerType: "inline-size",
+      
       outline: isActive ? "3px solid #ffc107" : "none",
       outlineOffset: isActive ? "2px" : "0px",
       boxShadow: isActive ? "0 0 15px rgba(255,193,7,0.6)" : "none",
       transform: isActive ? "scale(1.04)" : "scale(1)",
-      opacity: isLoading ? 0.7 : 1
+      opacity: isLoading ? 0.7 : 1,
+      backgroundColor: "rgba(255,255,255,0.1)",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      boxSizing: "border-box"
     };
   };
 
@@ -368,48 +386,77 @@ export default function App() {
       width: "100%",
       minHeight: "100vh",
       margin: 0,
-      padding: "20px",
+      padding: "10px",
       fontFamily: "sans-serif",
       backgroundColor: "#f4f6f9",
       boxSizing: "border-box"
     }}>
-      <h1 style={{ textAlign: "center", color: "#222", marginBottom: "5px", marginTop: "0px" }}>ポーカー勝率シミュレータ</h1>
-      <p style={{ textAlign: "center", color: "#475569", fontWeight: "bold", fontSize: "14px", marginBottom: "30px" }}>
+      <style>
+        {`
+          /* スロット内の画像等が崩れないための念の為の指定 */
+          .card-slot > * {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: contain !important;
+          }
+        `}
+      </style>
+      <h1 style={{ textAlign: "center", color: "#222", marginBottom: "5px", marginTop: "0px", fontSize: "clamp(18px, 2.5vw, 24px)" }}>ポーカー勝率シミュレータ</h1>
+      <p style={{ textAlign: "center", color: "#475569", fontWeight: "bold", fontSize: "12px", marginBottom: "20px" }}>
         枠を選択し、右側の52枚のカードマトリックスからクリックしてはめ込んでください。
       </p>
 
-      {/* メインコンテナ: flexWrap: "wrap" を指定してレスポンシブ化 */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "25px", maxWidth: "1200px", margin: "0 auto", alignItems: "flex-start" }}>
+      {/* メインコンテナ */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "20px", maxWidth: "1200px", margin: "0 auto", alignItems: "flex-start" }}>
 
         {/* 【左カラム】シミュレータ＆計算コントロール */}
-        <div style={{ flex: "1.2", minWidth: "550px" }}>
+        <div style={{ flex: "1.5", minWidth: "280px", width: "100%", boxSizing: "border-box" }}>
 
-          <div style={{ backgroundColor: "#155724", padding: "20px 25px", borderRadius: "15px", boxShadow: "0 10px 20px rgba(0,0,0,0.3)", color: "white", marginBottom: "25px" }}>
+          <div style={{ backgroundColor: "#155724", padding: "20px 12px", borderRadius: "15px", boxShadow: "0 10px 20px rgba(0,0,0,0.3)", color: "white", marginBottom: "25px" }}>
 
             {/* コミュニティボード */}
-            <div style={{ marginBottom: "5px", textAlign: "center" }}>
+            <div style={{ marginBottom: "5px", textAlign: "center", width: "100%" }}>
               <h3 style={{ borderBottom: "2px solid rgba(255,255,255,0.15)", paddingBottom: "6px", color: "#ffc107", marginTop: 0, fontSize: "13px", letterSpacing: "1px" }}>
                 COMMUNITY BOARD
               </h3>
 
               {/* 5枚のコミュニティカード */}
-              <div style={{ display: "flex", justifyContent: "center", gap: "10px", alignItems: "center", marginTop: "12px" }}>
-                <div onClick={() => !isLoading && setActiveSlot({ target: "board", index: 0 })} style={getSlotStyle("board", 0)}>
-                  <PlayingCard cardKey={board[0]} /><span style={miniLabelStyle}>Flop 1</span>
+              <div style={{ display: "flex", justifyContent: "center", gap: "2%", alignItems: "flex-start", marginTop: "12px", width: "100%" }}>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: "1 1 0", minWidth: 0 }}>
+                  <div className="card-slot" onClick={() => !isLoading && setActiveSlot({ target: "board", index: 0 })} style={getSlotStyle("board", 0)}>
+                    <PlayingCard cardKey={board[0]} />
+                  </div>
+                  <span style={miniLabelStyle}>Flop 1</span>
                 </div>
-                <div onClick={() => !isLoading && setActiveSlot({ target: "board", index: 1 })} style={getSlotStyle("board", 1)}>
-                  <PlayingCard cardKey={board[1]} /><span style={miniLabelStyle}>Flop 2</span>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: "1 1 0", minWidth: 0 }}>
+                  <div className="card-slot" onClick={() => !isLoading && setActiveSlot({ target: "board", index: 1 })} style={getSlotStyle("board", 1)}>
+                    <PlayingCard cardKey={board[1]} />
+                  </div>
+                  <span style={miniLabelStyle}>Flop 2</span>
                 </div>
-                <div onClick={() => !isLoading && setActiveSlot({ target: "board", index: 2 })} style={getSlotStyle("board", 2)}>
-                  <PlayingCard cardKey={board[2]} /><span style={miniLabelStyle}>Flop 3</span>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: "1 1 0", minWidth: 0 }}>
+                  <div className="card-slot" onClick={() => !isLoading && setActiveSlot({ target: "board", index: 2 })} style={getSlotStyle("board", 2)}>
+                    <PlayingCard cardKey={board[2]} />
+                  </div>
+                  <span style={miniLabelStyle}>Flop 3</span>
                 </div>
+                
                 <div style={dividerStyle} />
-                <div onClick={() => !isLoading && setActiveSlot({ target: "board", index: 3 })} style={getSlotStyle("board", 3)}>
-                  <PlayingCard cardKey={board[3]} /><span style={miniLabelStyle}>Turn</span>
+                
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: "1 1 0", minWidth: 0 }}>
+                  <div className="card-slot" onClick={() => !isLoading && setActiveSlot({ target: "board", index: 3 })} style={getSlotStyle("board", 3)}>
+                    <PlayingCard cardKey={board[3]} />
+                  </div>
+                  <span style={miniLabelStyle}>Turn</span>
                 </div>
+                
                 <div style={dividerStyle} />
-                <div onClick={() => !isLoading && setActiveSlot({ target: "board", index: 4 })} style={getSlotStyle("board", 4)}>
-                  <PlayingCard cardKey={board[4]} /><span style={miniLabelStyle}>River</span>
+                
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: "1 1 0", minWidth: 0 }}>
+                  <div className="card-slot" onClick={() => !isLoading && setActiveSlot({ target: "board", index: 4 })} style={getSlotStyle("board", 4)}>
+                    <PlayingCard cardKey={board[4]} />
+                  </div>
+                  <span style={miniLabelStyle}>River</span>
                 </div>
               </div>
 
@@ -425,7 +472,6 @@ export default function App() {
                   borderRadius: "10px",
                   textAlign: "left"
                 }}>
-                  {/* Player 1 の逆転アウツ */}
                   {outs.p1.length > 0 && (
                     <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
                       <span style={{ fontSize: "11px", color: "#66b0ff", fontWeight: "bold", whiteSpace: "nowrap", marginTop: "2px" }}>
@@ -436,7 +482,6 @@ export default function App() {
                       </div>
                     </div>
                   )}
-                  {/* Player 2 の逆転アウツ */}
                   {outs.p2.length > 0 && (
                     <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
                       <span style={{ fontSize: "11px", color: "#ff6b6b", fontWeight: "bold", whiteSpace: "nowrap", marginTop: "2px" }}>
@@ -452,23 +497,23 @@ export default function App() {
             </div>
 
             {/* プレイヤー手札 */}
-            <div style={{ display: "flex", justifyContent: "space-between", gap: "15px", marginTop: "25px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", marginTop: "25px", flexWrap: "nowrap" }}>
               {/* Player 1 */}
-              <div style={{ textAlign: "center", backgroundColor: "rgba(0,0,0,0.25)", padding: "12px", borderRadius: "10px", width: "49%" }}>
-                <h4 style={{ margin: "0 0 8px 0", fontSize: "14px" }}>Player 1</h4>
+              <div style={{ textAlign: "center", backgroundColor: "rgba(0,0,0,0.25)", padding: "10px 6px", borderRadius: "10px", width: "49%", minWidth: "0" }}>
+                <h4 style={{ margin: "0 0 8px 0", fontSize: "13px" }}>Player 1</h4>
                 <select disabled={isLoading} value={p1Select} onChange={(e) => setP1Select(e.target.value)} style={playerSelectStyle}>
-                  <option value="custom">カスタムハンド (カード指定)</option>
-                  <option value="strong">レンジ: 強 (上位11%)</option>
-                  <option value="medium">レンジ: 標準 (上位20%)</option>
-                  <option value="weak">レンジ: 弱 (上位35%)</option>
+                  <option value="custom">カスタムハンド</option>
+                  <option value="strong">レンジ: 強 (11%)</option>
+                  <option value="medium">レンジ: 標準 (20%)</option>
+                  <option value="weak">レンジ: 弱 (35%)</option>
                   <option value="any">レンジ: Any (100%)</option>
-                  <option value="myRange">マイレンジ (カスタム)</option>
+                  <option value="myRange">マイレンジ</option>
                 </select>
-                <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginTop: "8px" }}>
+                <div style={{ display: "flex", justifyContent: "center", gap: "6%", marginTop: "8px", width: "100%" }}>
                   {p1Select === "custom" ? (
                     <>
-                      <div onClick={() => !isLoading && setActiveSlot({ target: "p1", index: 0 })} style={getSlotStyle("p1", 0)}><PlayingCard cardKey={p1Hand[0]} /></div>
-                      <div onClick={() => !isLoading && setActiveSlot({ target: "p1", index: 1 })} style={getSlotStyle("p1", 1)}><PlayingCard cardKey={p1Hand[1]} /></div>
+                      <div className="card-slot" onClick={() => !isLoading && setActiveSlot({ target: "p1", index: 0 })} style={getSlotStyle("p1", 0)}><PlayingCard cardKey={p1Hand[0]} /></div>
+                      <div className="card-slot" onClick={() => !isLoading && setActiveSlot({ target: "p1", index: 1 })} style={getSlotStyle("p1", 1)}><PlayingCard cardKey={p1Hand[1]} /></div>
                     </>
                   ) : (
                     <>
@@ -477,26 +522,26 @@ export default function App() {
                     </>
                   )}
                 </div>
-                {result && <div style={{ marginTop: "12px", fontSize: "24px", fontWeight: "bold", color: "#66b0ff" }}>{result.p1Equity.toFixed(2)} %</div>}
-                {isLoading && <div style={{ marginTop: "12px", fontSize: "14px", color: "#cbd5e1", fontStyle: "italic" }}>計算中...</div>}
+                {result && <div style={{ marginTop: "12px", fontSize: "18px", fontWeight: "bold", color: "#66b0ff" }}>{result.p1Equity.toFixed(1)} %</div>}
+                {isLoading && <div style={{ marginTop: "12px", fontSize: "12px", color: "#cbd5e1", fontStyle: "italic" }}>計算中...</div>}
               </div>
 
               {/* Player 2 */}
-              <div style={{ textAlign: "center", backgroundColor: "rgba(0,0,0,0.25)", padding: "12px", borderRadius: "10px", width: "49%" }}>
-                <h4 style={{ margin: "0 0 8px 0", fontSize: "14px" }}>Player 2</h4>
+              <div style={{ textAlign: "center", backgroundColor: "rgba(0,0,0,0.25)", padding: "10px 6px", borderRadius: "10px", width: "49%", minWidth: "0" }}>
+                <h4 style={{ margin: "0 0 8px 0", fontSize: "13px" }}>Player 2</h4>
                 <select disabled={isLoading} value={p2Select} onChange={(e) => setP2Select(e.target.value)} style={playerSelectStyle}>
-                  <option value="custom">カスタムハンド (カード指定)</option>
-                  <option value="strong">レンジ: 強 (上位11%)</option>
-                  <option value="medium">レンジ: 標準 (上位20%)</option>
-                  <option value="weak">レンジ: 弱 (上位35%)</option>
+                  <option value="custom">カスタムハンド</option>
+                  <option value="strong">レンジ: 強 (11%)</option>
+                  <option value="medium">レンジ: 標準 (20%)</option>
+                  <option value="weak">レンジ: 弱 (35%)</option>
                   <option value="any">レンジ: Any (100%)</option>
-                  <option value="myRange">マイレンジ (カスタム)</option>
+                  <option value="myRange">マイレンジ</option>
                 </select>
-                <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginTop: "8px" }}>
+                <div style={{ display: "flex", justifyContent: "center", gap: "6%", marginTop: "8px", width: "100%" }}>
                   {p2Select === "custom" ? (
                     <>
-                      <div onClick={() => !isLoading && setActiveSlot({ target: "p2", index: 0 })} style={getSlotStyle("p2", 0)}><PlayingCard cardKey={p2Hand[0]} /></div>
-                      <div onClick={() => !isLoading && setActiveSlot({ target: "p2", index: 1 })} style={getSlotStyle("p2", 1)}><PlayingCard cardKey={p2Hand[1]} /></div>
+                      <div className="card-slot" onClick={() => !isLoading && setActiveSlot({ target: "p2", index: 0 })} style={getSlotStyle("p2", 0)}><PlayingCard cardKey={p2Hand[0]} /></div>
+                      <div className="card-slot" onClick={() => !isLoading && setActiveSlot({ target: "p2", index: 1 })} style={getSlotStyle("p2", 1)}><PlayingCard cardKey={p2Hand[1]} /></div>
                     </>
                   ) : (
                     <>
@@ -505,8 +550,8 @@ export default function App() {
                     </>
                   )}
                 </div>
-                {result && <div style={{ marginTop: "12px", fontSize: "24px", fontWeight: "bold", color: "#ff6b6b" }}>{result.p2Equity.toFixed(2)} %</div>}
-                {isLoading && <div style={{ marginTop: "12px", fontSize: "14px", color: "#cbd5e1", fontStyle: "italic" }}>計算中...</div>}
+                {result && <div style={{ marginTop: "12px", fontSize: "18px", fontWeight: "bold", color: "#ff6b6b" }}>{result.p2Equity.toFixed(1)} %</div>}
+                {isLoading && <div style={{ marginTop: "12px", fontSize: "12px", color: "#cbd5e1", fontStyle: "italic" }}>計算中...</div>}
               </div>
             </div>
           </div>
@@ -545,7 +590,7 @@ export default function App() {
             )}
           </div>
 
-          {/* 必要勝率計算機 (★ 左カラムの下部に移動しました) */}
+          {/* 必要勝率計算機 */}
           <div style={{
             marginTop: "25px",
             backgroundColor: "white",
@@ -620,10 +665,11 @@ export default function App() {
 
         </div>
 
-        {/* 【右カラム】52枚のカード選択マトリックス (★ ボードの真横に並ぶ形を維持) */}
+        {/* 【右カラム】52枚のカード選択マトリックス */}
         <div style={{
-          flex: "0.8",
-          minWidth: "380px",
+          flex: "1",
+          minWidth: "280px",
+          width: "100%",
           backgroundColor: "white",
           padding: "18px",
           borderRadius: "12px",
@@ -632,7 +678,7 @@ export default function App() {
           position: "sticky",
           top: "20px",
           opacity: isLoading ? 0.6 : 1,
-          overflowX: "auto" // ★ 380px以下の超極小画面でもハート以降が切れないようにする保険
+          overflowX: "auto"
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", borderBottom: "1px solid #e2e8f0", paddingBottom: "10px" }}>
             <h4 style={{ margin: 0, color: "#334155", fontSize: "14px", fontWeight: "bold" }}>カードマトリックス</h4>
@@ -683,8 +729,8 @@ export default function App() {
                       disabled={isUsed || isLoading}
                       style={{
                         flex: 1,
-                        padding: "7px 0",
-                        fontSize: "12px",
+                        padding: "clamp(3px, 1.2vw, 7px) 0",
+                        fontSize: "clamp(10px, 1.2vw, 13px)",
                         fontWeight: "bold",
                         borderRadius: "5px",
                         border: "1px solid #cbd5e1",
@@ -761,7 +807,7 @@ export default function App() {
                         style={{
                           flex: 1,
                           aspectRatio: "1/1",
-                          fontSize: "10px",
+                          fontSize: "clamp(8px, 1.5vw, 10px)",
                           fontWeight: "bold",
                           border: "1px solid #e2e8f0",
                           borderRadius: "4px",
@@ -770,6 +816,7 @@ export default function App() {
                                            rowIndex < colIndex ? (isSelected ? "#3b82f6" : "#eff6ff") :   
                                                                  (isSelected ? "#eab308" : "#fef9c3"),  
                           color: isSelected ? "white" : "#334155",
+                          padding: 0
                         }}
                       >
                         {handStr}
@@ -780,7 +827,6 @@ export default function App() {
               ))}
             </div>
 
-            {/* モーダルを閉じるボタン */}
             <div style={{ marginTop: "20px", display: "flex", justifyContent: "flex-end" }}>
               <button
                 onClick={() => setIsRangeModalOpen(false)}
@@ -808,7 +854,7 @@ export default function App() {
 // ==========================================
 const miniLabelStyle = {
   display: "block",
-  fontSize: "10px",
+  fontSize: "9px",
   color: "#cbd5e1",
   textAlign: "center",
   marginTop: "4px",
@@ -821,15 +867,16 @@ const dividerStyle = {
   height: "35px",
   backgroundColor: "rgba(255, 255, 255, 0.25)",
   margin: "0 2px",
-  alignSelf: "center"
+  alignSelf: "flex-start",
+  marginTop: "13px"
 };
 
 const playerSelectStyle = {
   width: "100%",
-  padding: "6px 10px",
+  padding: "4px 6px",
   borderRadius: "6px",
   border: "1px solid #cbd5e1",
-  fontSize: "13px",
+  fontSize: "11px",
   backgroundColor: "white",
   color: "#1e293b",
   cursor: "pointer",
