@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { calculateEquity } from "./utilities/simulator";
 import PlayingCard from "./components/PlayingCard";
 
@@ -86,6 +86,17 @@ function RangeCardPlaceholder({ label }) {
 // 2. メインコンポーネント
 // ==========================================
 export default function App() {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 960);
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   const [p1Select, setP1Select] = useState("custom");
   const [p2Select, setP2Select] = useState("custom");
 
@@ -342,20 +353,16 @@ export default function App() {
   const getSlotStyle = (target, index) => {
     const isActive = activeSlot && activeSlot.target === target && activeSlot.index === index;
     
-    // アスペクト比を固定し、親要素に合わせてレスポンシブに伸縮する
     return {
       width: "100%",
       maxWidth: target === "board" ? "65px" : "75px",
       minWidth: "40px",
-      aspectRatio: "3 / 4.2", // ポーカーカードの標準比率
+      aspectRatio: "3 / 4.2",
       cursor: isLoading ? "not-allowed" : "pointer",
       position: "relative",
       borderRadius: "8px",
       transition: "all 0.15s ease-in-out",
-      
-      // containerTypeを指定し、内部のPlayingCardでcqi単位を使えるようにする
       containerType: "inline-size",
-      
       outline: isActive ? "3px solid #ffc107" : "none",
       outlineOffset: isActive ? "2px" : "0px",
       boxShadow: isActive ? "0 0 15px rgba(255,193,7,0.6)" : "none",
@@ -421,7 +428,7 @@ export default function App() {
               </h3>
 
               {/* 5枚のコミュニティカード */}
-              <div style={{ display: "flex", justifyContent: "center", gap: "2%", alignItems: "flex-start", marginTop: "12px", width: "100%" }}>
+              <div style={{ display: "flex", justifyContent: "center", gap: "8px", alignItems: "flex-start", marginTop: "12px", width: "100%", maxWidth: "360px", margin: "12px auto 0" }}>
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: "1 1 0", minWidth: 0 }}>
                   <div className="card-slot" onClick={() => !isLoading && setActiveSlot({ target: "board", index: 0 })} style={getSlotStyle("board", 0)}>
                     <PlayingCard cardKey={board[0]} />
@@ -522,8 +529,6 @@ export default function App() {
                     </>
                   )}
                 </div>
-                {result && <div style={{ marginTop: "12px", fontSize: "18px", fontWeight: "bold", color: "#66b0ff" }}>{result.p1Equity.toFixed(1)} %</div>}
-                {isLoading && <div style={{ marginTop: "12px", fontSize: "12px", color: "#cbd5e1", fontStyle: "italic" }}>計算中...</div>}
               </div>
 
               {/* Player 2 */}
@@ -550,10 +555,58 @@ export default function App() {
                     </>
                   )}
                 </div>
-                {result && <div style={{ marginTop: "12px", fontSize: "18px", fontWeight: "bold", color: "#ff6b6b" }}>{result.p2Equity.toFixed(1)} %</div>}
-                {isLoading && <div style={{ marginTop: "12px", fontSize: "12px", color: "#cbd5e1", fontStyle: "italic" }}>計算中...</div>}
               </div>
             </div>
+
+            {/* 勝率（エクイティ）可視化バー */}
+            {result && !isLoading && (
+              <div style={{ marginTop: "25px", backgroundColor: "rgba(0,0,0,0.3)", padding: "15px", borderRadius: "10px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", fontSize: "13px", fontWeight: "bold" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <span style={{ color: "#66b0ff" }}>Player 1</span>
+                    <span style={{ color: "white", fontSize: "16px" }}>{result.p1Equity.toFixed(1)}%</span>
+                  </div>
+                  
+                  {(100 - result.p1Equity - result.p2Equity) > 0.1 && (
+                    <span style={{ color: "#cbd5e1", fontSize: "11px" }}>
+                      Tie (引き分け): {(100 - result.p1Equity - result.p2Equity).toFixed(1)}%
+                    </span>
+                  )}
+                  
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <span style={{ color: "white", fontSize: "16px" }}>{result.p2Equity.toFixed(1)}%</span>
+                    <span style={{ color: "#ff6b6b" }}>Player 2</span>
+                  </div>
+                </div>
+
+                <div style={{
+                  width: "100%",
+                  height: "16px",
+                  backgroundColor: "#cbd5e1",
+                  borderRadius: "8px",
+                  display: "flex",
+                  overflow: "hidden",
+                  boxShadow: "inset 0 2px 4px rgba(0,0,0,0.5)"
+                }}>
+                  <div style={{
+                    width: `${result.p1Equity}%`,
+                    backgroundColor: "#3b82f6",
+                    transition: "width 0.8s cubic-bezier(0.4, 0, 0.2, 1)"
+                  }} />
+                  <div style={{
+                    width: `${Math.max(0, 100 - result.p1Equity - result.p2Equity)}%`,
+                    backgroundColor: "#64748b",
+                    transition: "width 0.8s cubic-bezier(0.4, 0, 0.2, 1)"
+                  }} />
+                  <div style={{
+                    width: `${result.p2Equity}%`,
+                    backgroundColor: "#ef4444",
+                    transition: "width 0.8s cubic-bezier(0.4, 0, 0.2, 1)"
+                  }} />
+                </div>
+              </div>
+            )}
+
           </div>
 
           {/* 計算ボタン・結果表示エリア */}
