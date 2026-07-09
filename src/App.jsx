@@ -57,6 +57,7 @@ function getAnyRange() {
 }
 
 // レンジ選択時のプレースホルダー（裏面や文字のカード）
+// レンジ選択時のプレースホルダー（裏面や文字のカード）
 function RangeCardPlaceholder({ label }) {
   return (
     <div className="card-slot" style={{
@@ -65,7 +66,7 @@ function RangeCardPlaceholder({ label }) {
       minWidth: "40px",
       aspectRatio: "3 / 4.2",
       backgroundColor: "#2c3e50",
-      borderRadius: "6cqi",
+      borderRadius: "8px",       /* ★ 6cqi から 8px などの固定値に変更 */
       boxShadow: "0 3px 8px rgba(0,0,0,0.3)",
       display: "flex",
       justifyContent: "center",
@@ -73,7 +74,7 @@ function RangeCardPlaceholder({ label }) {
       border: "2px solid #ecf0f1",
       color: "white",
       fontWeight: "bold",
-      fontSize: "22cqi", // 幅に対して可変
+      fontSize: "14px",          /* ★ 22cqi から 14px前後の固定値に変更（暴走を防ぐ） */
       userSelect: "none",
       boxSizing: "border-box"
     }}>
