@@ -42,9 +42,9 @@ export default function PlayingCard({ cardKey }) {
   let color = "#212529";
 
   switch (suitInput) {
-    case "h": suitSymbol = "♥"; color = "#e11d48"; break; // 赤
+    case "h": suitSymbol = "♥"; color = "#e11d1d"; break; // 赤
     case "d": suitSymbol = "♦"; color = "#2563eb"; break; // 青
-    case "c": suitSymbol = "♣"; color = "#16a34a"; break; // 緑
+    case "c": suitSymbol = "♣"; color = "#208244"; break; // 緑
     case "s": suitSymbol = "♠"; color = "#1a1a1a"; break; // 黒
     default: break;
   }
