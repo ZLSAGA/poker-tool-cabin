@@ -7,8 +7,12 @@ const miniLabelStyle = {
 const dividerStyle = {
   width: "1px", height: "35px", backgroundColor: "rgba(255, 255, 255, 0.25)", margin: "0 2px", alignSelf: "flex-start", marginTop: "13px"
 };
+// ★ 右上の×ボタンの共通スタイル
+const closeBtnStyle = {
+  position: "absolute", top: "-6px", right: "-6px", width: "18px", height: "18px", borderRadius: "50%", backgroundColor: "#000000", color: "white", border: "1px solid white", fontSize: "11px", fontWeight: "bold", display: "flex", justifyContent: "center", alignItems: "center", cursor: "pointer", zIndex: 10, boxShadow: "0 2px 4px rgba(0,0,0,0.2)", padding: 0, lineHeight: 1
+};
 
-export default function CommunityBoard({ board, isLoading, activeSlot, setActiveSlot, getSlotStyle, outs, SUITS }) {
+export default function CommunityBoard({ board, isLoading, activeSlot, setActiveSlot, getSlotStyle, outs, SUITS, handleClearSpecificSlot }) {
   const renderOutCard = (cardKey) => {
     const rank = cardKey[0] === "T" ? "10" : cardKey[0];
     const suitKey = cardKey[1];
@@ -34,6 +38,10 @@ export default function CommunityBoard({ board, isLoading, activeSlot, setActive
           <div key={idx} style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: "1 1 0", minWidth: 0 }}>
             <div className="card-slot" onClick={() => !isLoading && setActiveSlot({ target: "board", index: idx })} style={getSlotStyle("board", idx)}>
               <PlayingCard cardKey={board[idx]} />
+              {/* ★ カードが存在するときだけ×ボタンを設置 (親へのクリック伝播を防ぐ stopPropagation 付き) */}
+              {board[idx] && (
+                <button onClick={(e) => { e.stopPropagation(); handleClearSpecificSlot("board", idx); }} style={closeBtnStyle}>×</button>
+              )}
             </div>
             <span style={miniLabelStyle}>Flop {idx + 1}</span>
           </div>
@@ -45,6 +53,9 @@ export default function CommunityBoard({ board, isLoading, activeSlot, setActive
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: "1 1 0", minWidth: 0 }}>
           <div className="card-slot" onClick={() => !isLoading && setActiveSlot({ target: "board", index: 3 })} style={getSlotStyle("board", 3)}>
             <PlayingCard cardKey={board[3]} />
+            {board[3] && (
+              <button onClick={(e) => { e.stopPropagation(); handleClearSpecificSlot("board", 3); }} style={closeBtnStyle}>×</button>
+            )}
           </div>
           <span style={miniLabelStyle}>Turn</span>
         </div>
@@ -55,6 +66,9 @@ export default function CommunityBoard({ board, isLoading, activeSlot, setActive
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: "1 1 0", minWidth: 0 }}>
           <div className="card-slot" onClick={() => !isLoading && setActiveSlot({ target: "board", index: 4 })} style={getSlotStyle("board", 4)}>
             <PlayingCard cardKey={board[4]} />
+            {board[4] && (
+              <button onClick={(e) => { e.stopPropagation(); handleClearSpecificSlot("board", 4); }} style={closeBtnStyle}>×</button>
+            )}
           </div>
           <span style={miniLabelStyle}>River</span>
         </div>

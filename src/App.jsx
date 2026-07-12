@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { calculateEquity } from "./utilities/simulator";
 
-// 新しいコンポーネントをインポート
 import CommunityBoard from "./components/CommunityBoard";
 import PlayerSection from "./components/PlayerSection";
 import PotOddsCalculator from "./components/PotOddsCalculator";
@@ -47,19 +46,12 @@ function getAnyRange() {
 }
 
 export default function App() {
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 960);
-    handleResize(); window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
   const [p1Select, setP1Select] = useState("custom");
   const [p2Select, setP2Select] = useState("custom");
   const [p1Hand, setP1Hand] = useState(["", ""]);
   const [p2Hand, setP2Hand] = useState(["", ""]);
   const [board, setBoard] = useState(["", "", "", "", ""]);
-  const [activeSlot, setActiveSlot] = useState({ target: "p1", index: 0 });
+  const [activeSlot, setActiveSlot] = useState(null); 
   const [history, setHistory] = useState([]);
   const [result, setResult] = useState(null);
   const [time, setTime] = useState(null);
@@ -78,17 +70,20 @@ export default function App() {
     ...board.filter(Boolean)
   ];
 
-  const saveToHistory = () => {
-    setHistory(prev => [...prev, { board: [...board], p1Hand: [...p1Hand], p2Hand: [...p2Hand], activeSlot: activeSlot ? { ...activeSlot } : null }]);
-  };
+const saveToHistory = () => {
+  setHistory(prev => [...prev, { board: [...board], p1Hand: [...p1Hand], p2Hand: [...p2Hand] }]);
+};
 
-  const handleUndo = () => {
-    if (history.length === 0 || isLoading) return;
-    const previousState = history[history.length - 1];
-    setHistory(prev => prev.slice(0, -1));
-    setBoard(previousState.board); setP1Hand(previousState.p1Hand); setP2Hand(previousState.p2Hand); setActiveSlot(previousState.activeSlot);
-    setErrorMessage("");
-  };
+const handleUndo = () => {
+  if (history.length === 0 || isLoading) return;
+  const previousState = history[history.length - 1];
+  setHistory(prev => prev.slice(0, -1));
+  setBoard(previousState.board);
+  setP1Hand(previousState.p1Hand);
+  setP2Hand(previousState.p2Hand);
+  setActiveSlot(null);
+  setErrorMessage("");
+};
 
   const handleSelectCard = (cardKey) => {
     if (!activeSlot || isLoading) return;
@@ -102,23 +97,18 @@ export default function App() {
 
     if (target === "p1") {
       const nextHand = [...p1Hand]; nextHand[index] = cardKey; setP1Hand(nextHand);
-      if (index === 0) setActiveSlot({ target: "p1", index: 1 });
-      else if (p2Select === "custom" && p2Hand.includes("")) setActiveSlot({ target: "p2", index: p2Hand.indexOf("") });
-      else setActiveSlot({ target: "board", index: board.indexOf("") !== -1 ? board.indexOf("") : 0 });
     } else if (target === "p2") {
       const nextHand = [...p2Hand]; nextHand[index] = cardKey; setP2Hand(nextHand);
-      if (index === 0) setActiveSlot({ target: "p2", index: 1 });
-      else setActiveSlot({ target: "board", index: board.indexOf("") !== -1 ? board.indexOf("") : 0 });
     } else if (target === "board") {
       const nextBoard = [...board]; nextBoard[index] = cardKey; setBoard(nextBoard);
-      if (index < 4) setActiveSlot({ target: "board", index: index + 1 });
-      else setActiveSlot(null);
     }
+
+    setActiveSlot(null);
   };
 
-  const handleClearSlot = () => {
-    if (!activeSlot || isLoading) return;
-    const { target, index } = activeSlot;
+
+  const handleClearSpecificSlot = (target, index) => {
+    if (isLoading) return;
     let currentCard = target === "p1" ? p1Hand[index] : target === "p2" ? p2Hand[index] : board[index];
     if (currentCard === "") return;
 
@@ -126,17 +116,10 @@ export default function App() {
 
     if (target === "p1") {
       const nextHand = [...p1Hand]; nextHand[index] = ""; setP1Hand(nextHand);
-      if (index === 0) setActiveSlot({ target: "p1", index: 1 });
-      else if (p2Select === "custom" && p2Hand.includes("")) setActiveSlot({ target: "p2", index: p2Hand.indexOf("") });
-      else setActiveSlot({ target: "board", index: board.indexOf("") !== -1 ? board.indexOf("") : 0 });
     } else if (target === "p2") {
       const nextHand = [...p2Hand]; nextHand[index] = ""; setP2Hand(nextHand);
-      if (index === 0) setActiveSlot({ target: "p2", index: 1 });
-      else setActiveSlot({ target: "board", index: board.indexOf("") !== -1 ? board.indexOf("") : 0 });
     } else if (target === "board") {
       const nextBoard = [...board]; nextBoard[index] = ""; setBoard(nextBoard);
-      if (index < 4) setActiveSlot({ target: "board", index: index + 1 });
-      else setActiveSlot(null);
     }
   };
 
@@ -145,7 +128,7 @@ export default function App() {
     if (board.every(c => c === "") && p1Hand.every(c => c === "") && p2Hand.every(c => c === "")) return;
     saveToHistory();
     setBoard(["", "", "", "", ""]); setP1Hand(["", ""]); setP2Hand(["", ""]);
-    setActiveSlot({ target: "p1", index: 0 }); setResult(null); setTime(null); setErrorMessage(""); setOuts(null);
+    setActiveSlot(null); setResult(null); setTime(null); setErrorMessage(""); setOuts(null);
   };
 
   const getPlayerData = (selectValue, customHand) => {
@@ -202,50 +185,73 @@ export default function App() {
   return (
     <div style={{ position: "relative", top: 0, left: 0, width: "100%", minHeight: "100vh", margin: 0, padding: "10px", fontFamily: "sans-serif", backgroundColor: "#f4f6f9", boxSizing: "border-box" }}>
       <h1 style={{ textAlign: "center", color: "#222", marginBottom: "5px", marginTop: "0px", fontSize: "clamp(18px, 2.5vw, 24px)" }}>ポーカー勝率シミュレータ</h1>
-      <p style={{ textAlign: "center", color: "#475569", fontWeight: "bold", fontSize: "12px", marginBottom: "20px" }}>枠を選択し、右側の52枚のカードマトリックスからクリックしてはめ込んでください。</p>
+      <p style={{ textAlign: "center", color: "#475569", fontWeight: "bold", fontSize: "12px", marginBottom: "20px" }}>枠を選択すると、カード選択用のポップアップが表示されます。</p>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "20px", maxWidth: "1200px", margin: "0 auto", alignItems: "flex-start" }}>
-        
-        {/* 【左カラム】 */}
-        <div style={{ flex: "1.5", minWidth: "280px", maxWidth: "600px", width: "100%", boxSizing: "border-box" }}>
-          <div style={{ backgroundColor: "#155724", padding: "20px 12px", borderRadius: "15px", boxShadow: "0 10px 20px rgba(0,0,0,0.3)", color: "white", marginBottom: "25px" }}>
+      <div style={{ maxWidth: "550px", margin: "0 auto", boxSizing: "border-box" }}>
 
-            {/* ① コミュニティボード */}
-            <CommunityBoard board={board} isLoading={isLoading} activeSlot={activeSlot} setActiveSlot={setActiveSlot} getSlotStyle={getSlotStyle} outs={outs} SUITS={SUITS} />
+        <div style={{ backgroundColor: "#155724", padding: "20px 12px", borderRadius: "15px", boxShadow: "0 10px 20px rgba(0,0,0,0.3)", color: "white", marginBottom: "25px" }}>
+          {/* コミュニティボード */}
+          <CommunityBoard board={board} isLoading={isLoading} activeSlot={activeSlot} setActiveSlot={setActiveSlot} getSlotStyle={getSlotStyle} outs={outs} SUITS={SUITS} handleClearSpecificSlot={handleClearSpecificSlot} />
 
-            {/* ② プレイヤー手札＆勝率バー */}
-            <PlayerSection isLoading={isLoading} p1Select={p1Select} setP1Select={setP1Select} p2Select={p2Select} setP2Select={setP2Select} p1Hand={p1Hand} p2Hand={p2Hand} setActiveSlot={setActiveSlot} getSlotStyle={getSlotStyle} getRangeLabel={getRangeLabel} result={result} />
-
-          </div>
-
-          {/* 計算コントロール */}
-          {errorMessage && <div style={{ fontWeight: "bold", color: "#d9534f", textAlign: "center", marginBottom: "15px" }}>{errorMessage}</div>}
-          <div style={{ textAlign: "center" }}>
-            <button onClick={handleCalculate} disabled={isLoading} style={{ width: "100%", backgroundColor: isLoading ? "#64748b" : "#2563eb", color: "white", border: "none", padding: "12px 20px", borderRadius: "8px", fontSize: "15px", fontWeight: "bold", cursor: isLoading ? "not-allowed" : "pointer", boxShadow: isLoading ? "none" : "0 4px 6px -1px rgba(37, 99, 235, 0.2)", transition: "all 0.2s ease" }}>
-              {isLoading ? "確率を計算しています..." : "このシチュエーションの勝率を計算する"}
-            </button>
-            <div style={{ marginTop: "15px" }}>
-              <button disabled={isLoading} onClick={() => setIsRangeModalOpen(true)} style={{ backgroundColor: "#e0f2fe", color: "#0369a1", border: "1px solid #bae6fd", padding: "8px 16px", fontSize: "13px", borderRadius: "6px", fontWeight: "bold", cursor: isLoading ? "not-allowed" : "pointer" }}>
-                マイレンジを設定・編集する
-              </button>
-            </div>
-            {time !== null && !isLoading && (
-              <div style={{ marginTop: "15px", color: "#444", fontSize: "13px", backgroundColor: "#fff", padding: "12px", borderRadius: "8px", border: "1px solid #e2e8f0", display: "inline-block" }}>
-                <p style={{ margin: "3px 0" }}>計算手法: <strong>{calcMethod}</strong></p>
-                <p style={{ margin: "3px 0" }}>処理時間: <strong>{time.toFixed(1)} ミリ秒</strong></p>
-              </div>
-            )}
-          </div>
-
-          {/* ③ 必要勝率計算機 */}
-          <PotOddsCalculator isLoading={isLoading} potSize={potSize} setPotSize={setPotSize} callAmount={callAmount} setCallAmount={setCallAmount} result={result} />
+          {/* プレイヤー手札＆勝率バー */}
+          <PlayerSection isLoading={isLoading} p1Select={p1Select} setP1Select={setP1Select} p2Select={p2Select} setP2Select={setP2Select} p1Hand={p1Hand} p2Hand={p2Hand} setActiveSlot={setActiveSlot} getSlotStyle={getSlotStyle} getRangeLabel={getRangeLabel} result={result} handleClearSpecificSlot={handleClearSpecificSlot} />
         </div>
 
-        {/* ④ 【右カラム】カードマトリックス */}
-        <CardMatrix isLoading={isLoading} history={history} handleUndo={handleUndo} activeSlot={activeSlot} handleClearSlot={handleClearSlot} handleClearAll={handleClearAll} RANKS={RANKS} SUITS={SUITS} usedCards={usedCards} handleSelectCard={handleSelectCard} />
+        {/* 計算コントロール */}
+        {errorMessage && <div style={{ fontWeight: "bold", color: "#d9534f", textAlign: "center", marginBottom: "15px" }}>{errorMessage}</div>}
+        <div style={{ textAlign: "center" }}>
+          <button onClick={handleCalculate} disabled={isLoading} style={{ width: "100%", backgroundColor: isLoading ? "#64748b" : "#2563eb", color: "white", border: "none", padding: "12px 20px", borderRadius: "8px", fontSize: "15px", fontWeight: "bold", cursor: isLoading ? "not-allowed" : "pointer", boxShadow: isLoading ? "none" : "0 4px 6px -1px rgba(37, 99, 235, 0.2)", transition: "all 0.2s ease" }}>
+            {isLoading ? "確率を計算しています..." : "このシチュエーションの勝率を計算する"}
+          </button>
+
+          {/* 「戻る」ボタンをメイン画面に常駐化、等幅配置 */}
+          <div style={{ marginTop: "15px", display: "flex", gap: "8px", justifyContent: "center" }}>
+            <button
+              onClick={handleUndo}
+              disabled={history.length === 0 || isLoading}
+              style={{
+                flex: 1, backgroundColor: (history.length === 0 || isLoading) ? "#f1f5f9" : "#e0f2fe",
+                color: (history.length === 0 || isLoading) ? "#94a3b8" : "#0369a1",
+                border: (history.length === 0 || isLoading) ? "1px solid #cbd5e1" : "1px solid #bae6fd",
+                padding: "10px 8px", fontSize: "13px", borderRadius: "6px", fontWeight: "bold",
+                cursor: (history.length === 0 || isLoading) ? "not-allowed" : "pointer"
+              }}
+            >
+              戻る ({history.length})
+            </button>
+            <button disabled={isLoading} onClick={() => setIsRangeModalOpen(true)} style={{ flex: 1, backgroundColor: "#f8fafc", color: "#475569", border: "1px solid #cbd5e1", padding: "10px 8px", fontSize: "13px", borderRadius: "6px", fontWeight: "bold", cursor: isLoading ? "not-allowed" : "pointer" }}>
+              マイレンジ設定
+            </button>
+            <button disabled={isLoading} onClick={handleClearAll} style={{ flex: 1, backgroundColor: "#fee2e2", color: "#ef4444", border: "1px solid #fca5a5", padding: "10px 8px", fontSize: "13px", borderRadius: "6px", fontWeight: "bold", cursor: isLoading ? "not-allowed" : "pointer" }}>
+              盤面を全消去
+            </button>
+          </div>
+
+          {time !== null && !isLoading && (
+            <div style={{ marginTop: "15px", color: "#444", fontSize: "13px", backgroundColor: "#fff", padding: "12px", borderRadius: "8px", border: "1px solid #e2e8f0", display: "inline-block", width: "100%", boxSizing: "border-box" }}>
+              <p style={{ margin: "3px 0" }}>計算手法: <strong>{calcMethod}</strong></p>
+              <p style={{ margin: "3px 0" }}>処理時間: <strong>{time.toFixed(1)} ミリ秒</strong></p>
+            </div>
+          )}
+        </div>
+
+        {/* 必要勝率計算機 */}
+        <PotOddsCalculator isLoading={isLoading} potSize={potSize} setPotSize={setPotSize} callAmount={callAmount} setCallAmount={setCallAmount} result={result} />
       </div>
 
-      {/* ⑤ マイレンジ編集モーダル */}
+      {/* 【ポップアップ】カードマトリックス */}
+      <CardMatrix
+        isOpen={activeSlot !== null}
+        onClose={() => setActiveSlot(null)}
+        isLoading={isLoading}
+        activeSlot={activeSlot}
+        RANKS={RANKS}
+        SUITS={SUITS}
+        usedCards={usedCards}
+        handleSelectCard={handleSelectCard}
+      />
+
+      {/* マイレンジ編集モーダル */}
       <RangeModal isRangeModalOpen={isRangeModalOpen} setIsRangeModalOpen={setIsRangeModalOpen} myRange={myRange} setMyRange={setMyRange} RANKS={RANKS} />
     </div>
   );

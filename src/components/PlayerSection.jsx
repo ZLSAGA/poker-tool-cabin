@@ -4,6 +4,9 @@ import PlayingCard from "./PlayingCard";
 const playerSelectStyle = {
   width: "100%", padding: "4px 6px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "11px", backgroundColor: "white", color: "#1e293b", cursor: "pointer", outline: "none"
 };
+const closeBtnStyle = {
+  position: "absolute", top: "-6px", right: "-6px", width: "18px", height: "18px", borderRadius: "50%", backgroundColor: "#000000", color: "white", border: "1px solid white", fontSize: "11px", fontWeight: "bold", display: "flex", justifyContent: "center", alignItems: "center", cursor: "pointer", zIndex: 10, boxShadow: "0 2px 4px rgba(0,0,0,0.2)", padding: 0, lineHeight: 1
+};
 
 function RangeCardPlaceholder({ label }) {
   return (
@@ -15,7 +18,7 @@ function RangeCardPlaceholder({ label }) {
   );
 }
 
-export default function PlayerSection({ isLoading, p1Select, setP1Select, p2Select, setP2Select, p1Hand, p2Hand, setActiveSlot, getSlotStyle, getRangeLabel, result }) {
+export default function PlayerSection({ isLoading, p1Select, setP1Select, p2Select, setP2Select, p1Hand, p2Hand, setActiveSlot, getSlotStyle, getRangeLabel, result, handleClearSpecificSlot }) {
   const renderPlayer = (id, selectValue, setSelectValue, hand, target) => (
     <div style={{ textAlign: "center", backgroundColor: "rgba(0,0,0,0.25)", padding: "10px 6px", borderRadius: "10px", width: "49%", minWidth: "0" }}>
       <h4 style={{ margin: "0 0 8px 0", fontSize: "13px" }}>Player {id}</h4>
@@ -30,8 +33,18 @@ export default function PlayerSection({ isLoading, p1Select, setP1Select, p2Sele
       <div style={{ display: "flex", justifyContent: "center", gap: "6%", marginTop: "8px", width: "100%" }}>
         {selectValue === "custom" ? (
           <>
-            <div className="card-slot" onClick={() => !isLoading && setActiveSlot({ target, index: 0 })} style={getSlotStyle(target, 0)}><PlayingCard cardKey={hand[0]} /></div>
-            <div className="card-slot" onClick={() => !isLoading && setActiveSlot({ target, index: 1 })} style={getSlotStyle(target, 1)}><PlayingCard cardKey={hand[1]} /></div>
+            <div className="card-slot" onClick={() => !isLoading && setActiveSlot({ target, index: 0 })} style={getSlotStyle(target, 0)}>
+              <PlayingCard cardKey={hand[0]} />
+              {hand[0] && (
+                <button onClick={(e) => { e.stopPropagation(); handleClearSpecificSlot(target, 0); }} style={closeBtnStyle}>×</button>
+              )}
+            </div>
+            <div className="card-slot" onClick={() => !isLoading && setActiveSlot({ target, index: 1 })} style={getSlotStyle(target, 1)}>
+              <PlayingCard cardKey={hand[1]} />
+              {hand[1] && (
+                <button onClick={(e) => { e.stopPropagation(); handleClearSpecificSlot(target, 1); }} style={closeBtnStyle}>×</button>
+              )}
+            </div>
           </>
         ) : (
           <>
