@@ -3,12 +3,14 @@ import { createDeck, filterDeck } from './card';
 import pokersolver from 'pokersolver';
 const { Hand } = pokersolver;
 
-export function calculateEquity(p1, p2, board) {
+// 💡 第4引数に iterations を受け取れるように拡張（デフォルトは30000）
+export function calculateEquity(p1, p2, board, iterations = 30000) {
   const needCards = 5 - board.length;
 
   // 1. 【モンテカルロ法】どちらかがレンジ指定、またはプリフロップ（残り5枚）の場合
   if (p1.isRange || p2.isRange || needCards === 5) {
-    const result = runMonteCarlo(p1, p2, board, 100000); // 10万回試行
+    // 💡 固定の30000ではなく、引数の iterations を渡す
+    const result = runMonteCarlo(p1, p2, board, iterations); 
 
     let reason = "";
     if (p1.isRange || p2.isRange) {
@@ -20,7 +22,8 @@ export function calculateEquity(p1, p2, board) {
     return {
       p1Equity: result.p1Equity,
       p2Equity: result.p2Equity,
-      calcMethod: `モンテカルロ法 (10万回試行) - ${reason}`
+      // 💡 表示テキストも実際の試行回数に連動するように動的化
+      calcMethod: `モンテカルロ法 (${iterations.toLocaleString()}回試行) - ${reason}`
     };
   }
 
@@ -77,7 +80,6 @@ function runExactEnumeration(hand1, hand2, board) {
       }
     }
   }
-  // ※ needCards === 5 (プリフロップ) の全探索は calculateEquity 側でブロックされるため実質通りませんが、安全のため残しています。
   else if (needCards === 5) {
     for (let i = 0; i < remainingDeck.length; i++) {
       for (let j = i + 1; j < remainingDeck.length; j++) {
@@ -106,7 +108,7 @@ function runExactEnumeration(hand1, hand2, board) {
   return {
     p1Equity: total > 0 ? ((p1Wins + ties * 0.5) / total) * 100 : 0,
     p2Equity: total > 0 ? ((p2Wins + ties * 0.5) / total) * 100 : 0,
-    totalPatterns: total // 総パターン数を返す
+    totalPatterns: total
   };
 }
 
@@ -165,10 +167,10 @@ function evaluateWinner(hand1, hand2, board) {
   const winners = Hand.winners([p1Hand, p2Hand]);
 
   if (winners.length === 2) {
-    return 0; // 引き分け
+    return 0;
   } else if (winners[0] === p1Hand) {
-    return 1; // P1勝ち
+    return 1;
   } else {
-    return 2; // P2勝ち
+    return 2;
   }
 }
