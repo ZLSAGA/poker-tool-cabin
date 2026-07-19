@@ -112,7 +112,7 @@ export default function App() {
     } else if (target === "board") {
       const nextBoard = [...board]; nextBoard[index] = cardKey; setBoard(nextBoard);
     }
-    
+
     setActiveSlot(null);
   };
 
@@ -169,11 +169,11 @@ export default function App() {
         // --- アウツ計算用のヘルパー関数（確定ハンド同士のみ計算） ---
         const getOutsForStreet = (targetBoard, currentEquity) => {
           if (isRangeFight || (targetBoard.length !== 3 && targetBoard.length !== 4)) return null;
-          
+
           const allCards = []; RANKS.forEach(r => SUITS.forEach(s => allCards.push(`${r}${s.key}`)));
           const streetUsedCards = [...p1Data.hand, ...p2Data.hand, ...targetBoard];
           const remainingCards = allCards.filter(c => !streetUsedCards.includes(c));
-          
+
           const p1OutsList = []; const p2OutsList = [];
           remainingCards.forEach(card => {
             const testResult = calculateEquity(p1Data, p2Data, [...targetBoard, card], 2000);
@@ -188,7 +188,7 @@ export default function App() {
 
         // 2. 過去の各ストリートの推移を計算
         const historyData = [];
-        
+
         // ① Preflop
         const preflopRes = calculateEquity(p1Data, p2Data, [], historyIterations);
         historyData.push({ label: "Preflop", p1: preflopRes.p1Equity, p2: preflopRes.p2Equity, outs: null });
@@ -246,13 +246,13 @@ export default function App() {
       <p style={{ textAlign: "center", color: "#475569", fontWeight: "bold", fontSize: "12px", marginBottom: "20px" }}>枠を選択すると、カード選択用のポップアップが表示されます。</p>
 
       <div style={{ maxWidth: isPc ? "1000px" : "550px", margin: "0 auto", boxSizing: "border-box", transition: "max-width 0.3s ease-in-out" }}>
-        
-        <div style={{ 
-          backgroundColor: "#155724", 
-          padding: "20px 15px", 
-          borderRadius: "15px", 
-          boxShadow: "0 10px 20px rgba(0,0,0,0.3)", 
-          color: "white", 
+
+        <div style={{
+          backgroundColor: "#155724",
+          padding: "20px 15px",
+          borderRadius: "15px",
+          boxShadow: "0 10px 20px rgba(0,0,0,0.3)",
+          color: "white",
           marginBottom: "25px",
           display: "flex",
           flexDirection: isPc ? "row" : "column",
@@ -284,7 +284,7 @@ export default function App() {
               )}
             </div>
           ) : (
-            // 💡 修正箇所：スマホ版のとき、親要素に具体的な高さ（height: "250px"）を持たせる
+
             equityHistory && (
               <div style={{ width: "100%", height: "250px", marginTop: "15px" }}>
                 <EquityChart historyData={equityHistory} />
@@ -299,17 +299,17 @@ export default function App() {
           <button onClick={handleCalculate} disabled={isLoading} style={{ width: "100%", backgroundColor: isLoading ? "#64748b" : "#2563eb", color: "white", border: "none", padding: "12px 20px", borderRadius: "8px", fontSize: "15px", fontWeight: "bold", cursor: isLoading ? "not-allowed" : "pointer", boxShadow: isLoading ? "none" : "0 4px 6px -1px rgba(37, 99, 235, 0.2)", transition: "all 0.2s ease" }}>
             {isLoading ? "確率を計算しています..." : "このシチュエーションの勝率を計算する"}
           </button>
-          
+
           <div style={{ marginTop: "15px", display: "flex", gap: "8px", justifyContent: "center" }}>
-            <button 
-              onClick={handleUndo} 
-              disabled={history.length === 0 || isLoading} 
-              style={{ 
-                flex: 1, backgroundColor: (history.length === 0 || isLoading) ? "#f1f5f9" : "#e0f2fe", 
-                color: (history.length === 0 || isLoading) ? "#94a3b8" : "#0369a1", 
-                border: (history.length === 0 || isLoading) ? "1px solid #cbd5e1" : "1px solid #bae6fd", 
-                padding: "10px 8px", fontSize: "13px", borderRadius: "6px", fontWeight: "bold", 
-                cursor: (history.length === 0 || isLoading) ? "not-allowed" : "pointer" 
+            <button
+              onClick={handleUndo}
+              disabled={history.length === 0 || isLoading}
+              style={{
+                flex: 1, backgroundColor: (history.length === 0 || isLoading) ? "#f1f5f9" : "#e0f2fe",
+                color: (history.length === 0 || isLoading) ? "#94a3b8" : "#0369a1",
+                border: (history.length === 0 || isLoading) ? "1px solid #cbd5e1" : "1px solid #bae6fd",
+                padding: "10px 8px", fontSize: "13px", borderRadius: "6px", fontWeight: "bold",
+                cursor: (history.length === 0 || isLoading) ? "not-allowed" : "pointer"
               }}
             >
               戻る ({history.length})
@@ -333,15 +333,15 @@ export default function App() {
         <PotOddsCalculator isLoading={isLoading} potSize={potSize} setPotSize={setPotSize} callAmount={callAmount} setCallAmount={setCallAmount} result={result} />
       </div>
 
-      <CardMatrix 
-        isOpen={activeSlot !== null} 
-        onClose={() => setActiveSlot(null)} 
-        isLoading={isLoading} 
-        activeSlot={activeSlot} 
-        RANKS={RANKS} 
-        SUITS={SUITS} 
-        usedCards={usedCards} 
-        handleSelectCard={handleSelectCard} 
+      <CardMatrix
+        isOpen={activeSlot !== null}
+        onClose={() => setActiveSlot(null)}
+        isLoading={isLoading}
+        activeSlot={activeSlot}
+        RANKS={RANKS}
+        SUITS={SUITS}
+        usedCards={usedCards}
+        handleSelectCard={handleSelectCard}
       />
 
       <RangeModal isRangeModalOpen={isRangeModalOpen} setIsRangeModalOpen={setIsRangeModalOpen} myRange={myRange} setMyRange={setMyRange} RANKS={RANKS} />
