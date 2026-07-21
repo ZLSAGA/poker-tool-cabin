@@ -19,6 +19,136 @@ const RANGE_STRONG = ["AA", "KK", "QQ", "JJ", "TT", "99", "88", "AKs", "AQs", "A
 const RANGE_MEDIUM = [...RANGE_STRONG, "77", "66", "55", "KJs", "QJs", "JTs", "T9s", "98s", "AJo", "ATo", "KQo"];
 const RANGE_WEAK = [...RANGE_MEDIUM, "44", "33", "22", "A9s", "A8s", "A7s", "A5s", "KTs", "QTs", "J9s", "87s", "76s", "A9o", "KTo", "QTo", "JTo"];
 
+
+function evaluateHandCategory(cards) {
+  if (cards.length < 5) return "highCard";
+
+  const ranks = "23456789TJQKA";
+  const rankCounts = {};
+  const suitCounts = {};
+  const rankValues = [];
+
+  cards.forEach(c => {
+    const r = c[0];
+    const s = c[1];
+    rankCounts[r] = (rankCounts[r] || 0) + 1;
+    suitCounts[s] = (suitCounts[s] || 0) + 1;
+    rankValues.push(ranks.indexOf(r));
+  });
+
+  // フラッシュチェック
+  let isFlush = false;
+  let flushSuit = null;
+  for (const s in suitCounts) {
+    if (suitCounts[s] >= 5) {
+      isFlush = true;
+      flushSuit = s;
+      break;
+    }
+  }
+
+  // ストレートチェック
+  const uniqueRanks = Array.from(new Set(rankValues)).sort((a, b) => b - a);
+  if (uniqueRanks.includes(12)) uniqueRanks.push(-1); // A (5-4-3-2-A用)
+
+  let isStraight = false;
+  let consecutive = 0;
+  for (let i = 0; i < uniqueRanks.length - 1; i++) {
+    if (uniqueRanks[i] - uniqueRanks[i + 1] === 1) {
+      consecutive++;
+      if (consecutive >= 4) { isStraight = true; break; }
+    } else {
+      consecutive = 0;
+    }
+  }
+
+  // ストレートフラッシュチェック
+  if (isFlush && isStraight) {
+    const flushCards = cards.filter(c => c[1] === flushSuit);
+    const flushRankVals = Array.from(new Set(flushCards.map(c => ranks.indexOf(c[0])))).sort((a, b) => b - a);
+    if (flushRankVals.includes(12)) flushRankVals.push(-1);
+    let fConsecutive = 0;
+    for (let i = 0; i < flushRankVals.length - 1; i++) {
+      if (flushRankVals[i] - flushRankVals[i + 1] === 1) {
+        fConsecutive++;
+        if (fConsecutive >= 4) return "fullHousePlus";
+      } else {
+        fConsecutive = 0;
+      }
+    }
+  }
+
+  const counts = Object.values(rankCounts).sort((a, b) => b - a);
+  if (counts[0] >= 4) return "fullHousePlus"; // フォーカード
+  if (counts[0] === 3 && counts[1] >= 2) return "fullHousePlus"; // フルハウス
+  if (isFlush) return "flush";
+  if (isStraight) return "straight";
+  if (counts[0] === 3) return "threeCard";
+  if (counts[0] === 2 && counts[1] === 2) return "twoPair";
+  if (counts[0] === 2) return "onePair";
+
+  return "highCard";
+}
+
+
+function calculateHandDistribution(p1Data, p2Data, currentBoard, samples = 500) {
+  const allCards = [];
+  RANKS.forEach(r => SUITS.forEach(s => allCards.push(`${r}${s.key}`)));
+
+  const p1Counts = { highCard: 0, onePair: 0, twoPair: 0, threeCard: 0, straight: 0, flush: 0, fullHousePlus: 0 };
+  const p2Counts = { highCard: 0, onePair: 0, twoPair: 0, threeCard: 0, straight: 0, flush: 0, fullHousePlus: 0 };
+
+  const getHandFromData = (pData) => {
+    if (pData.isRange) {
+      return pData.range[Math.floor(Math.random() * pData.range.length)];
+    }
+    return pData.hand;
+  };
+
+  for (let i = 0; i < samples; i++) {
+    const h1 = getHandFromData(p1Data);
+    const h2 = getHandFromData(p2Data);
+    
+    // カード重複ガード
+    const used = new Set([...h1, ...h2, ...currentBoard]);
+    if (used.size < h1.length + h2.length + currentBoard.length) continue;
+
+    const deck = allCards.filter(c => !used.has(c));
+    
+    // リバーまで補完
+    const needed = 5 - currentBoard.length;
+    const sampleBoard = [...currentBoard];
+    for (let j = 0; j < needed; j++) {
+      const idx = Math.floor(Math.random() * deck.length);
+      sampleBoard.push(deck.splice(idx, 1)[0]);
+    }
+
+    const cat1 = evaluateHandCategory([...h1, ...sampleBoard]);
+    const cat2 = evaluateHandCategory([...h2, ...sampleBoard]);
+
+    p1Counts[cat1]++;
+    p2Counts[cat2]++;
+  }
+
+  const formatDist = (counts) => {
+    const total = Object.values(counts).reduce((a, b) => a + b, 0) || 1;
+    return {
+      highCard: (counts.highCard / total) * 100,
+      onePair: (counts.onePair / total) * 100,
+      twoPair: (counts.twoPair / total) * 100,
+      threeCard: (counts.threeCard / total) * 100,
+      straight: (counts.straight / total) * 100,
+      flush: (counts.flush / total) * 100,
+      fullHousePlus: (counts.fullHousePlus / total) * 100,
+    };
+  };
+
+  return {
+    p1: formatDist(p1Counts),
+    p2: formatDist(p2Counts)
+  };
+}
+
 function expandRange(rangeArray) {
   const suits = ['h', 'd', 'c', 's']; const combos = [];
   rangeArray.forEach(pair => {
@@ -166,7 +296,6 @@ export default function App() {
         const mainIterations = isRangeFight ? 10000 : 30000;
         const historyIterations = isRangeFight ? 5000 : 10000;
 
-        // --- アウツ計算用のヘルパー関数（確定ハンド同士のみ計算） ---
         const getOutsForStreet = (targetBoard, currentEquity) => {
           if (isRangeFight || (targetBoard.length !== 3 && targetBoard.length !== 4)) return null;
 
@@ -183,6 +312,33 @@ export default function App() {
           return { p1: p1OutsList, p2: p2OutsList };
         };
 
+        // 🟢 データを完全整形するヘルパー関数
+        const formatHistoryItem = (label, res, targetBoard, outs = null) => {
+          // 役の分布を自動計算して組み込む
+          const dist = calculateHandDistribution(p1Data, p2Data, targetBoard);
+
+          return {
+            label,
+            p1: res.p1Equity ?? 0,
+            p2: res.p2Equity ?? 0,
+            outs,
+            p1_highCard: dist.p1.highCard,
+            p1_onePair: dist.p1.onePair,
+            p1_twoPair: dist.p1.twoPair,
+            p1_threeCard: dist.p1.threeCard,
+            p1_straight: dist.p1.straight,
+            p1_flush: dist.p1.flush,
+            p1_fullHousePlus: dist.p1.fullHousePlus,
+            p2_highCard: dist.p2.highCard,
+            p2_onePair: dist.p2.onePair,
+            p2_twoPair: dist.p2.twoPair,
+            p2_threeCard: dist.p2.threeCard,
+            p2_straight: dist.p2.straight,
+            p2_flush: dist.p2.flush,
+            p2_fullHousePlus: dist.p2.fullHousePlus,
+          };
+        };
+
         // 1. メインの勝率計算
         const equityResult = calculateEquity(p1Data, p2Data, currentBoard, mainIterations);
 
@@ -191,14 +347,14 @@ export default function App() {
 
         // ① Preflop
         const preflopRes = calculateEquity(p1Data, p2Data, [], historyIterations);
-        historyData.push({ label: "Preflop", p1: preflopRes.p1Equity, p2: preflopRes.p2Equity, outs: null });
+        historyData.push(formatHistoryItem("Preflop", preflopRes, [], null));
 
         // ② Flop
         if (currentBoard.length >= 3) {
           const flopBoard = currentBoard.slice(0, 3);
           const flopRes = calculateEquity(p1Data, p2Data, flopBoard, historyIterations);
           const flopOuts = getOutsForStreet(flopBoard, flopRes);
-          historyData.push({ label: "Flop", p1: flopRes.p1Equity, p2: flopRes.p2Equity, outs: flopOuts });
+          historyData.push(formatHistoryItem("Flop", flopRes, flopBoard, flopOuts));
         }
 
         // ③ Turn
@@ -206,13 +362,14 @@ export default function App() {
           const turnBoard = currentBoard.slice(0, 4);
           const turnRes = calculateEquity(p1Data, p2Data, turnBoard, historyIterations);
           const turnOuts = getOutsForStreet(turnBoard, turnRes);
-          historyData.push({ label: "Turn", p1: turnRes.p1Equity, p2: turnRes.p2Equity, outs: turnOuts });
+          historyData.push(formatHistoryItem("Turn", turnRes, turnBoard, turnOuts));
         }
 
         // ④ River
         if (currentBoard.length === 5) {
-          const riverRes = calculateEquity(p1Data, p2Data, currentBoard.slice(0, 5), historyIterations);
-          historyData.push({ label: "River", p1: riverRes.p1Equity, p2: riverRes.p2Equity, outs: null });
+          const riverBoard = currentBoard.slice(0, 5);
+          const riverRes = calculateEquity(p1Data, p2Data, riverBoard, historyIterations);
+          historyData.push(formatHistoryItem("River", riverRes, riverBoard, null));
         }
 
         setEquityHistory(historyData);
@@ -220,7 +377,7 @@ export default function App() {
         const endTime = performance.now();
         setCalcMethod(equityResult.calcMethod); setResult(equityResult); setTime(endTime - startTime);
 
-        // 3. 現在の盤面のアウツ（画面下部のUI表示用）
+        // 3. 現在の盤面のアウツ
         const currentOuts = getOutsForStreet(currentBoard, equityResult);
         if (currentOuts) setOuts(currentOuts);
 
@@ -276,7 +433,7 @@ export default function App() {
                   display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "20px",
                   textAlign: "center", color: "rgba(255,255,255,0.45)", backgroundColor: "rgba(0,0,0,0.15)", boxSizing: "border-box"
                 }}>
-                  <span style={{ fontSize: "13px", fontWeight: "bold", color: "#ffc107" }}>EQUITY TRENDS</span>
+                  <span style={{ fontSize: "13px", fontWeight: "bold", color: "#ffc107" }}>EQUITY & HAND ANALYZER</span>
                   <span style={{ fontSize: "11px", marginTop: "6px", maxWidth: "260px", lineHeight: "1.4" }}>
                     勝率計算を実行すると、ここにストリートごとの推移チャートが表示されます。
                   </span>
@@ -284,9 +441,8 @@ export default function App() {
               )}
             </div>
           ) : (
-
             equityHistory && (
-              <div style={{ width: "100%", height: "250px", marginTop: "15px" }}>
+              <div style={{ width: "100%", minHeight: "280px", marginTop: "15px" }}>
                 <EquityChart historyData={equityHistory} />
               </div>
             )
