@@ -312,7 +312,7 @@ export default function App() {
           return { p1: p1OutsList, p2: p2OutsList };
         };
 
-        // 🟢 データを完全整形するヘルパー関数
+        // データを完全整形するヘルパー関数
         const formatHistoryItem = (label, res, targetBoard, outs = null) => {
           // 役の分布を自動計算して組み込む
           const dist = calculateHandDistribution(p1Data, p2Data, targetBoard);
@@ -478,15 +478,9 @@ export default function App() {
             </button>
           </div>
 
-          {time !== null && !isLoading && (
-            <div style={{ marginTop: "15px", color: "#444", fontSize: "13px", backgroundColor: "#fff", padding: "12px", borderRadius: "8px", border: "1px solid #e2e8f0", display: "inline-block", width: "100%", boxSizing: "border-box" }}>
-              <p style={{ margin: "3px 0" }}>計算手法: <strong>{calcMethod}</strong></p>
-              <p style={{ margin: "3px 0" }}>処理時間: <strong>{time.toFixed(1)} ミリ秒</strong></p>
-            </div>
-          )}
         </div>
 
-        <PotOddsCalculator isLoading={isLoading} potSize={potSize} setPotSize={setPotSize} callAmount={callAmount} setCallAmount={setCallAmount} result={result} />
+        <PotOddsCalculator isLoading={isLoading} potSize={potSize} setPotSize={setPotSize} callAmount={callAmount} setCallAmount={setCallAmount} result={result} equityHistory={equityHistory} />
       </div>
 
       <CardMatrix
