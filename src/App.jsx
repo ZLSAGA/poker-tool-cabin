@@ -294,7 +294,7 @@ export default function App() {
         
         const isRangeFight = p1Data.isRange || p2Data.isRange;
         const mainIterations = isRangeFight ? 10000 : 30000;
-        const historyIterations = isRangeFight ? 5000 : 10000;
+        const historyIterations = isRangeFight ? 10000 : 30000;
 
         const getOutsForStreet = (targetBoard, currentEquity) => {
           if (isRangeFight || (targetBoard.length !== 3 && targetBoard.length !== 4)) return null;
