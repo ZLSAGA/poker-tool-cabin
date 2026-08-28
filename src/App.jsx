@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { calculateEquity } from "./utilities/simulator";
+import pokersolver from "pokersolver";
+const { Hand } = pokersolver;
 
 import CommunityBoard from "./components/CommunityBoard";
 import PlayerSection from "./components/PlayerSection";
@@ -21,73 +23,34 @@ const RANGE_WEAK = [...RANGE_MEDIUM, "44", "33", "22", "A9s", "A8s", "A7s", "A5s
 
 
 function evaluateHandCategory(cards) {
+  // 5枚未満の場合は判定不可のためハイカード扱い
   if (cards.length < 5) return "highCard";
 
-  const ranks = "23456789TJQKA";
-  const rankCounts = {};
-  const suitCounts = {};
-  const rankValues = [];
+  // pokersolverで役を解析[cite: 6]
+  const solved = Hand.solve(cards);
 
-  cards.forEach(c => {
-    const r = c[0];
-    const s = c[1];
-    rankCounts[r] = (rankCounts[r] || 0) + 1;
-    suitCounts[s] = (suitCounts[s] || 0) + 1;
-    rankValues.push(ranks.indexOf(r));
-  });
-
-  // フラッシュチェック
-  let isFlush = false;
-  let flushSuit = null;
-  for (const s in suitCounts) {
-    if (suitCounts[s] >= 5) {
-      isFlush = true;
-      flushSuit = s;
-      break;
-    }
+  // pokersolverの役名をアプリ内のカテゴリーキーにマッピング
+  switch (solved.name) {
+    case "Pair":
+      return "onePair";
+    case "Two Pair":
+      return "twoPair";
+    case "Three of a Kind":
+      return "threeCard";
+    case "Straight":
+      return "straight";
+    case "Flush":
+      return "flush";
+    case "Full House":
+    case "Four of a Kind":
+    case "Straight Flush":
+    case "Royal Flush":
+    case "Wild Royal Flush":
+      return "fullHousePlus";
+    case "High Card":
+    default:
+      return "highCard";
   }
-
-  // ストレートチェック
-  const uniqueRanks = Array.from(new Set(rankValues)).sort((a, b) => b - a);
-  if (uniqueRanks.includes(12)) uniqueRanks.push(-1); // A (5-4-3-2-A用)
-
-  let isStraight = false;
-  let consecutive = 0;
-  for (let i = 0; i < uniqueRanks.length - 1; i++) {
-    if (uniqueRanks[i] - uniqueRanks[i + 1] === 1) {
-      consecutive++;
-      if (consecutive >= 4) { isStraight = true; break; }
-    } else {
-      consecutive = 0;
-    }
-  }
-
-  // ストレートフラッシュチェック
-  if (isFlush && isStraight) {
-    const flushCards = cards.filter(c => c[1] === flushSuit);
-    const flushRankVals = Array.from(new Set(flushCards.map(c => ranks.indexOf(c[0])))).sort((a, b) => b - a);
-    if (flushRankVals.includes(12)) flushRankVals.push(-1);
-    let fConsecutive = 0;
-    for (let i = 0; i < flushRankVals.length - 1; i++) {
-      if (flushRankVals[i] - flushRankVals[i + 1] === 1) {
-        fConsecutive++;
-        if (fConsecutive >= 4) return "fullHousePlus";
-      } else {
-        fConsecutive = 0;
-      }
-    }
-  }
-
-  const counts = Object.values(rankCounts).sort((a, b) => b - a);
-  if (counts[0] >= 4) return "fullHousePlus"; // フォーカード
-  if (counts[0] === 3 && counts[1] >= 2) return "fullHousePlus"; // フルハウス
-  if (isFlush) return "flush";
-  if (isStraight) return "straight";
-  if (counts[0] === 3) return "threeCard";
-  if (counts[0] === 2 && counts[1] === 2) return "twoPair";
-  if (counts[0] === 2) return "onePair";
-
-  return "highCard";
 }
 
 
@@ -283,8 +246,19 @@ export default function App() {
   const handleCalculate = () => {
     setResult(null); setTime(null); setErrorMessage(""); setOuts(null); setEquityHistory(null);
     const currentBoard = board.filter(c => c !== "");
-    if (p1Select === "custom" && (p1Hand[0] === "" || p1Hand[1] === "")) { setErrorMessage("Player 1 のカードを選んでください。"); return; }
-    if (p2Select === "custom" && (p2Hand[0] === "" || p2Hand[1] === "")) { setErrorMessage("Player 2 のカードを選んでください。"); return; }
+    
+    const errorMessages = [];
+    if (p1Select === "custom" && (p1Hand[0] === "" || p1Hand[1] === "")) {
+      errorMessages.push("Player 1 のカードを選んでください。");
+    }
+    if (p2Select === "custom" && (p2Hand[0] === "" || p2Hand[1] === "")) {
+      errorMessages.push("Player 2 のカードを選んでください。");
+    }
+
+    if (errorMessages.length > 0) {
+      setErrorMessage(errorMessages.join("\n"));
+      return;
+    }
 
     setIsLoading(true);
     setTimeout(() => {
