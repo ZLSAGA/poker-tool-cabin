@@ -3,14 +3,12 @@ import { createDeck, filterDeck } from './card';
 import pokersolver from 'pokersolver';
 const { Hand } = pokersolver;
 
-// 💡 第4引数に iterations を受け取れるように拡張（デフォルトは30000）
-export function calculateEquity(p1, p2, board, iterations = 30000) {
+// ★ 第5引数に exposedCards を追加 (デフォルトは空配列)
+export function calculateEquity(p1, p2, board, iterations = 30000, exposedCards = []) {
   const needCards = 5 - board.length;
 
-  // 1. 【モンテカルロ法】どちらかがレンジ指定、またはプリフロップ（残り5枚）の場合
   if (p1.isRange || p2.isRange || needCards === 5) {
-    // 💡 固定の30000ではなく、引数の iterations を渡す
-    const result = runMonteCarlo(p1, p2, board, iterations); 
+    const result = runMonteCarlo(p1, p2, board, iterations, exposedCards); 
 
     let reason = "";
     if (p1.isRange || p2.isRange) {
@@ -22,27 +20,32 @@ export function calculateEquity(p1, p2, board, iterations = 30000) {
     return {
       p1Equity: result.p1Equity,
       p2Equity: result.p2Equity,
-      // 💡 表示テキストも実際の試行回数に連動するように動的化
+      p1Win: result.p1Win,
+      p2Win: result.p2Win,
+      tie: result.tie,
       calcMethod: `モンテカルロ法 (${iterations.toLocaleString()}回試行) - ${reason}`
     };
   }
 
-  // 2. 【全探索】どちらもレンジなし（ハンド対ハンド）かつ フロップ以降（残り2枚以下）の場合
-  const result = runExactEnumeration(p1.hand, p2.hand, board);
+  const result = runExactEnumeration(p1.hand, p2.hand, board, exposedCards);
   return {
     p1Equity: result.p1Equity,
     p2Equity: result.p2Equity,
+    p1Win: result.p1Win,
+    p2Win: result.p2Win,
+    tie: result.tie,
     calcMethod: `全探索 (${result.totalPatterns.toLocaleString()}通りの組み合わせ)`
   };
 }
 
 // 全探索の実行
-function runExactEnumeration(hand1, hand2, board) {
+function runExactEnumeration(hand1, hand2, board, exposedCards = []) {
   const baseDeck = createDeck();
   const allUsedCards = [];
   hand1.forEach(c => allUsedCards.push(c));
   hand2.forEach(c => allUsedCards.push(c));
   board.forEach(c => allUsedCards.push(c));
+  exposedCards.forEach(c => allUsedCards.push(c)); // ★ デッドカード追加
 
   const remainingDeck = filterDeck(baseDeck, allUsedCards);
   const needCards = 5 - board.length;
@@ -108,12 +111,15 @@ function runExactEnumeration(hand1, hand2, board) {
   return {
     p1Equity: total > 0 ? ((p1Wins + ties * 0.5) / total) * 100 : 0,
     p2Equity: total > 0 ? ((p2Wins + ties * 0.5) / total) * 100 : 0,
+    p1Win: total > 0 ? (p1Wins / total) * 100 : 0,
+    p2Win: total > 0 ? (p2Wins / total) * 100 : 0,
+    tie: total > 0 ? (ties / total) * 100 : 0,
     totalPatterns: total
   };
 }
 
 // モンテカルロ法の実行
-function runMonteCarlo(p1, p2, board, iterations) {
+function runMonteCarlo(p1, p2, board, iterations, exposedCards = []) {
   let p1Wins = 0;
   let p2Wins = 0;
   let ties = 0;
@@ -125,9 +131,9 @@ function runMonteCarlo(p1, p2, board, iterations) {
     let hand1 = p1.isRange ? p1.range[Math.floor(Math.random() * p1.range.length)] : p1.hand;
     let hand2 = p2.isRange ? p2.range[Math.floor(Math.random() * p2.range.length)] : p2.hand;
 
-    if (!hand1 || !hand2) return { p1Equity: 0, p2Equity: 0 };
+    if (!hand1 || !hand2) return { p1Equity: 0, p2Equity: 0, p1Win: 0, p2Win: 0, tie: 0 };
 
-    const usedCardKeys = [...hand1, ...hand2, ...board];
+    const usedCardKeys = [...hand1, ...hand2, ...board, ...exposedCards]; // ★ デッドカード追加
     const uniqueCards = new Set(usedCardKeys);
     
     if (uniqueCards.size !== usedCardKeys.length) {
@@ -154,6 +160,9 @@ function runMonteCarlo(p1, p2, board, iterations) {
   return {
     p1Equity: ((p1Wins + ties * 0.5) / iterations) * 100,
     p2Equity: ((p2Wins + ties * 0.5) / iterations) * 100,
+    p1Win: (p1Wins / iterations) * 100,
+    p2Win: (p2Wins / iterations) * 100,
+    tie: (ties / iterations) * 100,
   };
 }
 

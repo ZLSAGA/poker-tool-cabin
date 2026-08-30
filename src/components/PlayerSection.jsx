@@ -63,28 +63,91 @@ export default function PlayerSection({ isLoading, p1Select, setP1Select, p2Sele
         {renderPlayer(2, p2Select, setP2Select, p2Hand, "p2")}
       </div>
 
-      {result && !isLoading && (
-        <div style={{ marginTop: "25px", backgroundColor: "rgba(0,0,0,0.3)", padding: "15px", borderRadius: "10px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", fontSize: "13px", fontWeight: "bold" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <span style={{ color: "#66b0ff" }}>Player 1</span>
-              <span style={{ color: "white", fontSize: "16px" }}>{result.p1Equity.toFixed(1)}%</span>
-            </div>
-            {(100 - result.p1Equity - result.p2Equity) > 0.1 && (
-              <span style={{ color: "#cbd5e1", fontSize: "11px" }}>Tie: {(100 - result.p1Equity - result.p2Equity).toFixed(1)}%</span>
-            )}
-            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <span style={{ color: "white", fontSize: "16px" }}>{result.p2Equity.toFixed(1)}%</span>
-              <span style={{ color: "#ff6b6b" }}>Player 2</span>
-            </div>
+{result && (
+  <div style={{
+    marginTop: "15px",
+    backgroundColor: "rgba(0, 0, 0, 0.35)",
+    padding: "12px 16px",
+    borderRadius: "10px",
+    width: "100%",
+    boxSizing: "border-box"
+  }}>
+    {/* テキスト表示領域（3カラム幅固定） */}
+    <div style={{
+      display: "flex",
+      justify: "space-between",
+      alignItems: "center",
+      marginBottom: "8px",
+      fontWeight: "bold",
+      width: "100%"
+    }}>
+      {/* Player 1（左端揃え） */}
+      <div style={{ color: "#66b0ff", fontSize: "15px", flex: 1, textAlign: "left", whiteSpace: "nowrap" }}>
+        Player 1 <span style={{ fontSize: "18px", marginLeft: "4px" }}>
+          {(result.p1Win ?? (result.p1Equity - (result.tie || 0) / 2)).toFixed(1)}%
+        </span>
+      </div>
+
+      {/* Chop（中央揃え） */}
+      <div style={{ flex: "0 0 auto", textAlign: "center", padding: "0 8px" }}>
+        {(result.tie ?? 0) > 0.05 && (
+          <div style={{
+            color: "#d1d1ce",
+            backgroundColor: "rgba(132, 132, 132, 0.25)",
+            border: "1px solid rgba(113, 113, 112, 0.5)",
+            padding: "2px 8px",
+            borderRadius: "12px",
+            fontSize: "12px",
+            fontWeight: "bold",
+            whiteSpace: "nowrap"
+          }}>
+            Chop {result.tie.toFixed(1)}%
           </div>
-          <div style={{ width: "100%", height: "16px", backgroundColor: "#cbd5e1", borderRadius: "8px", display: "flex", overflow: "hidden", boxShadow: "inset 0 2px 4px rgba(0,0,0,0.5)" }}>
-            <div style={{ width: `${result.p1Equity}%`, backgroundColor: "#3b82f6", transition: "width 0.8s" }} />
-            <div style={{ width: `${Math.max(0, 100 - result.p1Equity - result.p2Equity)}%`, backgroundColor: "#64748b", transition: "width 0.8s" }} />
-            <div style={{ width: `${result.p2Equity}%`, backgroundColor: "#ef4444", transition: "width 0.8s" }} />
-          </div>
-        </div>
+        )}
+      </div>
+
+      {/* Player 2（右端揃え） */}
+      <div style={{ color: "#ff6b6b", fontSize: "15px", flex: 1, textAlign: "right", whiteSpace: "nowrap" }}>
+        <span style={{ fontSize: "18px", marginRight: "4px" }}>
+          {(result.p2Win ?? (result.p2Equity - (result.tie || 0) / 2)).toFixed(1)}%
+        </span> Player 2
+      </div>
+    </div>
+
+    {/* 3分割バー (青: P1勝率 / 灰: Chop率 / 赤: P2勝率) */}
+    <div style={{
+      display: "flex",
+      height: "12px",
+      width: "100%",
+      borderRadius: "6px",
+      overflow: "hidden",
+      backgroundColor: "#1e293b"
+    }}>
+      {/* P1 勝率 */}
+      <div style={{
+        width: `${result.p1Win ?? (result.p1Equity - (result.tie || 0) / 2)}%`,
+        backgroundColor: "#2563eb",
+        transition: "width 0.3s ease"
+      }} />
+
+      {/* Chop */}
+      {(result.tie ?? 0) > 0 && (
+        <div style={{
+          width: `${result.tie}%`,
+          backgroundColor: "#929292",
+          transition: "width 0.3s ease"
+        }} />
       )}
+
+      {/* P2 勝率 */}
+      <div style={{
+        width: `${result.p2Win ?? (result.p2Equity - (result.tie || 0) / 2)}%`,
+        backgroundColor: "#ef4444",
+        transition: "width 0.3s ease"
+      }} />
+    </div>
+  </div>
+)}
     </>
   );
 }

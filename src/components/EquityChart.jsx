@@ -228,7 +228,7 @@ export default function EquityChart({ historyData, style }) {
               
               <Tooltip content={<CustomBarTooltip />} cursor={{ fill: 'rgba(255, 255, 255, 0.1)' }} />
 
-              {/* 🟢 Player 1 用の積層バー (stackId="p1") */}
+              {/*  Player 1 用の積層バー (stackId="p1") */}
               <Bar dataKey="p1_highCard" stackId="p1" fill={HAND_COLORS.highCard} isAnimationActive={false} />
               <Bar dataKey="p1_onePair" stackId="p1" fill={HAND_COLORS.onePair} isAnimationActive={false} />
               <Bar dataKey="p1_twoPair" stackId="p1" fill={HAND_COLORS.twoPair} isAnimationActive={false} />
@@ -237,7 +237,7 @@ export default function EquityChart({ historyData, style }) {
               <Bar dataKey="p1_flush" stackId="p1" fill={HAND_COLORS.flush} isAnimationActive={false} />
               <Bar dataKey="p1_fullHousePlus" stackId="p1" fill={HAND_COLORS.fullHousePlus} isAnimationActive={false} />
 
-              {/* 🟢 Player 2 用の積層バー (stackId="p2") */}
+              {/*  Player 2 用の積層バー (stackId="p2") */}
               <Bar dataKey="p2_highCard" stackId="p2" fill={HAND_COLORS.highCard} isAnimationActive={false} />
               <Bar dataKey="p2_onePair" stackId="p2" fill={HAND_COLORS.onePair} isAnimationActive={false} />
               <Bar dataKey="p2_twoPair" stackId="p2" fill={HAND_COLORS.twoPair} isAnimationActive={false} />

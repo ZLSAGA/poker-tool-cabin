@@ -4,6 +4,7 @@ import pokersolver from "pokersolver";
 const { Hand } = pokersolver;
 
 import CommunityBoard from "./components/CommunityBoard";
+import ExposedSection from "./components/ExposedSection"; // ★ インポートを追加
 import PlayerSection from "./components/PlayerSection";
 import PotOddsCalculator from "./components/PotOddsCalculator";
 import CardMatrix from "./components/CardMatrix";
@@ -21,15 +22,10 @@ const RANGE_STRONG = ["AA", "KK", "QQ", "JJ", "TT", "99", "88", "AKs", "AQs", "A
 const RANGE_MEDIUM = [...RANGE_STRONG, "77", "66", "55", "KJs", "QJs", "JTs", "T9s", "98s", "AJo", "ATo", "KQo"];
 const RANGE_WEAK = [...RANGE_MEDIUM, "44", "33", "22", "A9s", "A8s", "A7s", "A5s", "KTs", "QTs", "J9s", "87s", "76s", "A9o", "KTo", "QTo", "JTo"];
 
-
 function evaluateHandCategory(cards) {
-  // 5枚未満の場合は判定不可のためハイカード扱い
   if (cards.length < 5) return "highCard";
-
-  // pokersolverで役を解析[cite: 6]
   const solved = Hand.solve(cards);
 
-  // pokersolverの役名をアプリ内のカテゴリーキーにマッピング
   switch (solved.name) {
     case "Pair":
       return "onePair";
@@ -53,7 +49,6 @@ function evaluateHandCategory(cards) {
   }
 }
 
-
 function calculateHandDistribution(p1Data, p2Data, currentBoard, samples = 500) {
   const allCards = [];
   RANKS.forEach(r => SUITS.forEach(s => allCards.push(`${r}${s.key}`)));
@@ -72,13 +67,11 @@ function calculateHandDistribution(p1Data, p2Data, currentBoard, samples = 500) 
     const h1 = getHandFromData(p1Data);
     const h2 = getHandFromData(p2Data);
     
-    // カード重複ガード
     const used = new Set([...h1, ...h2, ...currentBoard]);
     if (used.size < h1.length + h2.length + currentBoard.length) continue;
 
     const deck = allCards.filter(c => !used.has(c));
     
-    // リバーまで補完
     const needed = 5 - currentBoard.length;
     const sampleBoard = [...currentBoard];
     for (let j = 0; j < needed; j++) {
@@ -145,6 +138,7 @@ export default function App() {
   const [p1Hand, setP1Hand] = useState(["", ""]);
   const [p2Hand, setP2Hand] = useState(["", ""]);
   const [board, setBoard] = useState(["", "", "", "", ""]);
+  const [exposedCards, setExposedCards] = useState(["", "", "", "", "", ""]);
   const [activeSlot, setActiveSlot] = useState(null); 
   const [history, setHistory] = useState([]);
   const [result, setResult] = useState(null);
@@ -158,6 +152,7 @@ export default function App() {
   const [potSize, setPotSize] = useState("7");
   const [callAmount, setCallAmount] = useState("5");
   const [equityHistory, setEquityHistory] = useState(null);
+  const [invalidBoardSlots, setInvalidBoardSlots] = useState([]);
   const [windowWidth, setWindowWidth] = useState(typeof window !== "undefined" ? window.innerWidth : 1024);
 
   useEffect(() => {
@@ -171,18 +166,20 @@ export default function App() {
   const usedCards = [
     ...(p1Select === "custom" ? p1Hand.filter(Boolean) : []),
     ...(p2Select === "custom" ? p2Hand.filter(Boolean) : []),
-    ...board.filter(Boolean)
+    ...board.filter(Boolean),
+    ...exposedCards.filter(Boolean)
   ];
 
   const saveToHistory = () => {
-    setHistory(prev => [...prev, { board: [...board], p1Hand: [...p1Hand], p2Hand: [...p2Hand] }]);
+    setHistory(prev => [...prev, { board: [...board], p1Hand: [...p1Hand], p2Hand: [...p2Hand], exposedCards: [...exposedCards] }]);
   };
 
   const handleUndo = () => {
     if (history.length === 0 || isLoading) return;
     const previousState = history[history.length - 1];
     setHistory(prev => prev.slice(0, -1));
-    setBoard(previousState.board); setP1Hand(previousState.p1Hand); setP2Hand(previousState.p2Hand); 
+    setBoard(previousState.board); setP1Hand(previousState.p1Hand); setP2Hand(previousState.p2Hand);
+    setExposedCards(previousState.exposedCards || ["", "", "", "", "", ""]);
     setActiveSlot(null);
     setErrorMessage("");
     setEquityHistory(null);
@@ -192,7 +189,7 @@ export default function App() {
     if (!activeSlot || isLoading) return;
     const { target, index } = activeSlot;
     if (usedCards.includes(cardKey)) {
-      let currentSlotCard = target === "p1" ? p1Hand[index] : target === "p2" ? p2Hand[index] : board[index];
+      let currentSlotCard = target === "p1" ? p1Hand[index] : target === "p2" ? p2Hand[index] : target === "exposed" ? exposedCards[index] : board[index];
       if (currentSlotCard !== cardKey) return;
     }
 
@@ -204,6 +201,8 @@ export default function App() {
       const nextHand = [...p2Hand]; nextHand[index] = cardKey; setP2Hand(nextHand);
     } else if (target === "board") {
       const nextBoard = [...board]; nextBoard[index] = cardKey; setBoard(nextBoard);
+    } else if (target === "exposed") {
+      const nextExposed = [...exposedCards]; nextExposed[index] = cardKey; setExposedCards(nextExposed);
     }
 
     setActiveSlot(null);
@@ -211,7 +210,7 @@ export default function App() {
 
   const handleClearSpecificSlot = (target, index) => {
     if (isLoading) return;
-    let currentCard = target === "p1" ? p1Hand[index] : target === "p2" ? p2Hand[index] : board[index];
+    let currentCard = target === "p1" ? p1Hand[index] : target === "p2" ? p2Hand[index] : target === "exposed" ? exposedCards[index] : board[index];
     if (currentCard === "") return;
 
     saveToHistory(); setOuts(null);
@@ -222,14 +221,16 @@ export default function App() {
       const nextHand = [...p2Hand]; nextHand[index] = ""; setP2Hand(nextHand);
     } else if (target === "board") {
       const nextBoard = [...board]; nextBoard[index] = ""; setBoard(nextBoard);
+    } else if (target === "exposed") {
+      const nextExposed = [...exposedCards]; nextExposed[index] = ""; setExposedCards(nextExposed);
     }
   };
 
   const handleClearAll = () => {
     if (isLoading) return;
-    if (board.every(c => c === "") && p1Hand.every(c => c === "") && p2Hand.every(c => c === "")) return;
+    if (board.every(c => c === "") && p1Hand.every(c => c === "") && p2Hand.every(c => c === "") && exposedCards.every(c => c === "")) return;
     saveToHistory();
-    setBoard(["", "", "", "", ""]); setP1Hand(["", ""]); setP2Hand(["", ""]);
+    setBoard(["", "", "", "", ""]); setP1Hand(["", ""]); setP2Hand(["", ""]); setExposedCards(["", "", "", "", "", ""]);
     setActiveSlot(null); setResult(null); setTime(null); setErrorMessage(""); setOuts(null);
     setEquityHistory(null);
   };
@@ -244,15 +245,98 @@ export default function App() {
   };
 
   const handleCalculate = () => {
-    setResult(null); setTime(null); setErrorMessage(""); setOuts(null); setEquityHistory(null);
-    const currentBoard = board.filter(c => c !== "");
-    
+    setResult(null);
+    setTime(null);
+    setErrorMessage("");
+    setOuts(null);
+    setEquityHistory(null);
+    setInvalidBoardSlots([]);
+
+    const currentBoard = board.filter((c) => c !== "");
+    const deadCards = exposedCards.filter(Boolean); // ★ 関数直下に移動してスコープ全体で参照可能に
     const errorMessages = [];
+
+    const flopCards = [board[0], board[1], board[2]];
+    const filledFlopCount = flopCards.filter((c) => c !== "").length;
+
+    if (filledFlopCount > 0 && filledFlopCount < 3) {
+      errorMessages.push("Flopカードは3枚すべて入力してください。");
+      const missingIndices = [0, 1, 2].filter((i) => board[i] === "");
+      setInvalidBoardSlots(missingIndices);
+    }
+
     if (p1Select === "custom" && (p1Hand[0] === "" || p1Hand[1] === "")) {
       errorMessages.push("Player 1 のカードを選んでください。");
     }
     if (p2Select === "custom" && (p2Hand[0] === "" || p2Hand[1] === "")) {
       errorMessages.push("Player 2 のカードを選んでください。");
+    }
+
+    const expandRangeToCombos = (rangeList) => {
+      if (!rangeList || !Array.isArray(rangeList)) return [];
+      const expanded = [];
+
+      rangeList.forEach((item) => {
+        if (typeof item !== "string") return;
+
+        if (item.length === 4) {
+          expanded.push(item);
+          return;
+        }
+
+        if (item.length === 2 && item[0] === item[1]) {
+          const r = item[0];
+          for (let i = 0; i < SUITS.length; i++) {
+            for (let j = i + 1; j < SUITS.length; j++) {
+              expanded.push(`${r}${SUITS[i].key}${r}${SUITS[j].key}`);
+            }
+          }
+        } else if (item.length === 3 && item[2] === "s") {
+          const r1 = item[0];
+          const r2 = item[1];
+          SUITS.forEach(s => expanded.push(`${r1}${s.key}${r2}${s.key}`));
+        } else if (item.length === 3 && item[2] === "o") {
+          const r1 = item[0];
+          const r2 = item[1];
+          SUITS.forEach(s1 => SUITS.forEach(s2 => {
+            if (s1.key !== s2.key) expanded.push(`${r1}${s1.key}${r2}${s2.key}`);
+          }));
+        }
+      });
+
+      return expanded;
+    };
+
+    const usedCardsSet = new Set([...currentBoard, ...deadCards]);
+    if (p1Select === "custom") p1Hand.forEach((c) => c && usedCardsSet.add(c));
+    if (p2Select === "custom") p2Hand.forEach((c) => c && usedCardsSet.add(c));
+
+    const getValidCombos = (rangeList) => {
+      const allCombos = expandRangeToCombos(rangeList);
+      return allCombos.filter((combo) => {
+        const c1 = combo.slice(0, 2);
+        const c2 = combo.slice(2, 4);
+        return !usedCardsSet.has(c1) && !usedCardsSet.has(c2);
+      });
+    };
+
+    const p1RangeList = p1Select === "myRange" ? myRange : (Array.isArray(p1Select) ? p1Select : []);
+    const p2RangeList = p2Select === "myRange" ? myRange : (Array.isArray(p2Select) ? p2Select : []);
+
+    if (p1Select !== "custom") {
+      if (p1RangeList.length === 0) {
+        errorMessages.push("Player 1: レンジが選択されていません。");
+      } else if (getValidCombos(p1RangeList).length === 0) {
+        errorMessages.push("Player 1: カードの重複により、計算可能な組み合わせ（コンボ）がありません。");
+      }
+    }
+
+    if (p2Select !== "custom") {
+      if (p2RangeList.length === 0) {
+        errorMessages.push("Player 2: レンジが選択されていません。");
+      } else if (getValidCombos(p2RangeList).length === 0) {
+        errorMessages.push("Player 2: カードの重複により、計算可能な組み合わせ（コンボ）がありません。");
+      }
     }
 
     if (errorMessages.length > 0) {
@@ -263,32 +347,87 @@ export default function App() {
     setIsLoading(true);
     setTimeout(() => {
       try {
-        let p1Data = getPlayerData(p1Select, p1Hand); let p2Data = getPlayerData(p2Select, p2Hand);
+        let p1Data = getPlayerData(p1Select, p1Hand);
+        let p2Data = getPlayerData(p2Select, p2Hand);
         const startTime = performance.now();
         
         const isRangeFight = p1Data.isRange || p2Data.isRange;
         const mainIterations = isRangeFight ? 10000 : 30000;
         const historyIterations = isRangeFight ? 10000 : 30000;
 
-        const getOutsForStreet = (targetBoard, currentEquity) => {
+        const getOutsForStreet = (targetBoard) => {
           if (isRangeFight || (targetBoard.length !== 3 && targetBoard.length !== 4)) return null;
 
-          const allCards = []; RANKS.forEach(r => SUITS.forEach(s => allCards.push(`${r}${s.key}`)));
-          const streetUsedCards = [...p1Data.hand, ...p2Data.hand, ...targetBoard];
-          const remainingCards = allCards.filter(c => !streetUsedCards.includes(c));
+          const toStandardCard = (c) => {
+            if (!c) return "";
+            let str = String(c).trim().replace(/^10/, "T");
+            if (str.length < 2) return "";
 
-          const p1OutsList = []; const p2OutsList = [];
-          remainingCards.forEach(card => {
-            const testResult = calculateEquity(p1Data, p2Data, [...targetBoard, card], 2000);
-            if (testResult.p1Equity > testResult.p2Equity && currentEquity.p1Equity <= currentEquity.p2Equity) p1OutsList.push(card);
-            if (testResult.p2Equity > testResult.p1Equity && currentEquity.p2Equity <= currentEquity.p1Equity) p2OutsList.push(card);
+            const rank = str[0].toUpperCase();
+            const lastChar = str[str.length - 1].toLowerCase();
+
+            let suitKey = "";
+            if (lastChar === "s" || lastChar === "♠") suitKey = "s";
+            else if (lastChar === "h" || lastChar === "♥") suitKey = "h";
+            else if (lastChar === "d" || lastChar === "♦") suitKey = "d";
+            else if (lastChar === "c" || lastChar === "♣") suitKey = "c";
+
+            return rank && suitKey ? `${rank}${suitKey}` : "";
+          };
+
+          const p1Cards = p1Data.hand.map(toStandardCard).filter(Boolean);
+          const p2Cards = p2Data.hand.map(toStandardCard).filter(Boolean);
+          const boardCards = targetBoard.map(toStandardCard).filter(Boolean);
+          const expCards = deadCards.map(toStandardCard).filter(Boolean);
+
+          const allCards = [];
+          RANKS.forEach((r) => {
+            ['s', 'h', 'd', 'c'].forEach((sKey) => {
+              allCards.push(`${r}${sKey}`);
+            });
           });
-          return { p1: p1OutsList, p2: p2OutsList };
+
+          const currentUsed = new Set([...p1Cards, ...p2Cards, ...boardCards, ...expCards]);
+          const remainingCards = allCards.filter((c) => !currentUsed.has(c));
+
+          const currentP1Solve = Hand.solve([...p1Cards, ...boardCards]);
+          const currentP2Solve = Hand.solve([...p2Cards, ...boardCards]);
+          const currentWinners = Hand.winners([currentP1Solve, currentP2Solve]);
+
+          const p1OutsList = [];
+          const p2OutsList = [];
+          const chopOutsList = [];
+
+          remainingCards.forEach((card) => {
+            const nextBoard = [...boardCards, card];
+            const p1Solve = Hand.solve([...p1Cards, ...nextBoard]);
+            const p2Solve = Hand.solve([...p2Cards, ...nextBoard]);
+            const winners = Hand.winners([p1Solve, p2Solve]);
+
+            if (winners.length === 1) {
+              if (winners[0] === p1Solve) p1OutsList.push(card);
+              if (winners[0] === p2Solve) p2OutsList.push(card);
+            } else if (winners.length === 2) {
+              chopOutsList.push(card);
+            }
+          });
+
+          let finalP1Outs = [];
+          let finalP2Outs = [];
+
+          if (currentWinners.length === 1 && currentWinners[0] === currentP2Solve) {
+            finalP1Outs = p1OutsList;
+          } else if (currentWinners.length === 1 && currentWinners[0] === currentP1Solve) {
+            finalP2Outs = p2OutsList;
+          } else {
+            finalP1Outs = p1OutsList;
+            finalP2Outs = p2OutsList;
+          }
+
+          return { p1: finalP1Outs, p2: finalP2Outs, chop: chopOutsList };
         };
 
-        // データを完全整形するヘルパー関数
         const formatHistoryItem = (label, res, targetBoard, outs = null) => {
-          // 役の分布を自動計算して組み込む
           const dist = calculateHandDistribution(p1Data, p2Data, targetBoard);
 
           return {
@@ -313,36 +452,30 @@ export default function App() {
           };
         };
 
-        // 1. メインの勝率計算
-        const equityResult = calculateEquity(p1Data, p2Data, currentBoard, mainIterations);
+        const equityResult = calculateEquity(p1Data, p2Data, currentBoard, mainIterations, deadCards);
 
-        // 2. 過去の各ストリートの推移を計算
         const historyData = [];
 
-        // ① Preflop
-        const preflopRes = calculateEquity(p1Data, p2Data, [], historyIterations);
+        const preflopRes = calculateEquity(p1Data, p2Data, [], historyIterations, deadCards);
         historyData.push(formatHistoryItem("Preflop", preflopRes, [], null));
 
-        // ② Flop
         if (currentBoard.length >= 3) {
           const flopBoard = currentBoard.slice(0, 3);
-          const flopRes = calculateEquity(p1Data, p2Data, flopBoard, historyIterations);
-          const flopOuts = getOutsForStreet(flopBoard, flopRes);
+          const flopRes = calculateEquity(p1Data, p2Data, flopBoard, historyIterations, deadCards);
+          const flopOuts = getOutsForStreet(flopBoard);
           historyData.push(formatHistoryItem("Flop", flopRes, flopBoard, flopOuts));
         }
 
-        // ③ Turn
         if (currentBoard.length >= 4) {
           const turnBoard = currentBoard.slice(0, 4);
-          const turnRes = calculateEquity(p1Data, p2Data, turnBoard, historyIterations);
-          const turnOuts = getOutsForStreet(turnBoard, turnRes);
+          const turnRes = calculateEquity(p1Data, p2Data, turnBoard, historyIterations, deadCards);
+          const turnOuts = getOutsForStreet(turnBoard);
           historyData.push(formatHistoryItem("Turn", turnRes, turnBoard, turnOuts));
         }
 
-        // ④ River
         if (currentBoard.length === 5) {
           const riverBoard = currentBoard.slice(0, 5);
-          const riverRes = calculateEquity(p1Data, p2Data, riverBoard, historyIterations);
+          const riverRes = calculateEquity(p1Data, p2Data, riverBoard, historyIterations, deadCards);
           historyData.push(formatHistoryItem("River", riverRes, riverBoard, null));
         }
 
@@ -351,8 +484,7 @@ export default function App() {
         const endTime = performance.now();
         setCalcMethod(equityResult.calcMethod); setResult(equityResult); setTime(endTime - startTime);
 
-        // 3. 現在の盤面のアウツ
-        const currentOuts = getOutsForStreet(currentBoard, equityResult);
+        const currentOuts = getOutsForStreet(currentBoard);
         if (currentOuts) setOuts(currentOuts);
 
       } catch (err) { setErrorMessage("計算エラーが発生しました。"); console.error(err); } finally { setIsLoading(false); }
@@ -392,7 +524,8 @@ export default function App() {
         }}>
           {/* 左カラム */}
           <div style={{ flex: isPc ? "1 1 50%" : "none", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-            <CommunityBoard board={board} isLoading={isLoading} activeSlot={activeSlot} setActiveSlot={setActiveSlot} getSlotStyle={getSlotStyle} outs={outs} SUITS={SUITS} handleClearSpecificSlot={handleClearSpecificSlot} />
+            <CommunityBoard board={board} isLoading={isLoading} activeSlot={activeSlot} setActiveSlot={setActiveSlot} getSlotStyle={getSlotStyle} outs={outs} SUITS={SUITS} handleClearSpecificSlot={handleClearSpecificSlot} invalidBoardSlots={invalidBoardSlots}/>
+            <ExposedSection exposedCards={exposedCards} isLoading={isLoading} activeSlot={activeSlot} setActiveSlot={setActiveSlot} getSlotStyle={getSlotStyle} handleClearSpecificSlot={handleClearSpecificSlot} />
             <PlayerSection isLoading={isLoading} p1Select={p1Select} setP1Select={setP1Select} p2Select={p2Select} setP2Select={setP2Select} p1Hand={p1Hand} p2Hand={p2Hand} setActiveSlot={setActiveSlot} getSlotStyle={getSlotStyle} getRangeLabel={getRangeLabel} result={result} handleClearSpecificSlot={handleClearSpecificSlot} />
           </div>
 
@@ -424,7 +557,7 @@ export default function App() {
         </div>
 
         {/* コントロールパネル */}
-        {errorMessage && <div style={{ fontWeight: "bold", color: "#d9534f", textAlign: "center", marginBottom: "15px" }}>{errorMessage}</div>}
+        {errorMessage && <div style={{ fontWeight: "bold", color: "#d9534f", textAlign: "center", marginBottom: "15px", whiteSpace: "pre-line" }}>{errorMessage}</div>}
         <div style={{ textAlign: "center" }}>
           <button onClick={handleCalculate} disabled={isLoading} style={{ width: "100%", backgroundColor: isLoading ? "#64748b" : "#2563eb", color: "white", border: "none", padding: "12px 20px", borderRadius: "8px", fontSize: "15px", fontWeight: "bold", cursor: isLoading ? "not-allowed" : "pointer", boxShadow: isLoading ? "none" : "0 4px 6px -1px rgba(37, 99, 235, 0.2)", transition: "all 0.2s ease" }}>
             {isLoading ? "確率を計算しています..." : "このシチュエーションの勝率を計算する"}
