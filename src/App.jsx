@@ -10,6 +10,7 @@ import PotOddsCalculator from "./components/PotOddsCalculator";
 import CardMatrix from "./components/CardMatrix";
 import RangeModal from "./components/RangeModal";
 import EquityChart from "./components/EquityChart";
+import HelpModal from "./components/HelpModal";
 
 const RANKS = ['A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2'];
 const SUITS = [
@@ -147,6 +148,7 @@ export default function App() {
   const [errorMessage, setErrorMessage] = useState("");
   const [myRange, setMyRange] = useState([]);
   const [isRangeModalOpen, setIsRangeModalOpen] = useState(false);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [outs, setOuts] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [potSize, setPotSize] = useState("7");
@@ -473,6 +475,31 @@ export default function App() {
 
   return (
     <div style={{ position: "relative", top: 0, left: 0, width: "100%", minHeight: "100vh", margin: 0, padding: "10px", fontFamily: "sans-serif", backgroundColor: "#f4f6f9", boxSizing: "border-box" }}>
+      {/* 右上のヘルプボタン */}
+      <div style={{ position: "absolute", top: "12px", right: "16px", zIndex: 10 }}>
+        <button
+          onClick={() => setIsHelpOpen(true)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "5px",
+            backgroundColor: "#ffffff",
+            color: "#1e293b",
+            border: "1px solid #cbd5e1",
+            borderRadius: "20px",
+            padding: "6px 14px",
+            fontSize: "12px",
+            fontWeight: "bold",
+            cursor: "pointer",
+            boxShadow: "0 2px 5px rgba(0,0,0,0.08)",
+            transition: "all 0.15s ease"
+          }}
+        >
+          <span>？
+            </span> 使い方
+        </button>
+      </div>
+
       <h1 style={{ textAlign: "center", color: "#222", marginBottom: "5px", marginTop: "0px", fontSize: "clamp(18px, 2.5vw, 24px)" }}>ポーカー勝率シミュレータ</h1>
       <p style={{ textAlign: "center", color: "#475569", fontWeight: "bold", fontSize: "12px", marginBottom: "20px" }}>枠を選択すると、カード選択用のポップアップが表示されます。</p>
 
@@ -570,6 +597,7 @@ export default function App() {
       />
 
       <RangeModal isRangeModalOpen={isRangeModalOpen} setIsRangeModalOpen={setIsRangeModalOpen} myRange={myRange} setMyRange={setMyRange} RANKS={RANKS} />
+      <HelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
     </div>
   );
 }
