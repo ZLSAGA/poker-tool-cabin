@@ -468,8 +468,12 @@ export default function App() {
   };
 
   // ウィンドウサイズに応じた動的計算
+  const HAND_SCALE_FACTOR = 1.5;
   const dynamicCardMaxWidthBoard = `${Math.min(85, Math.max(42, Math.round(windowSize.width * 0.052)))}px`;
-  const dynamicCardMaxWidthPlayer = `${Math.min(65, Math.max(32, Math.round(windowSize.width * 0.040)))}px`;
+  const baseCardMaxWidthPlayer = Math.min(65, Math.max(32, Math.round(windowSize.width * 0.040)));
+  const dynamicCardMaxWidthPlayer = `${baseCardMaxWidthPlayer * HAND_SCALE_FACTOR}px`;
+  const baseCardMinWidthPlayer = 28;
+  const dynamicCardMinWidthPlayer = `${baseCardMinWidthPlayer * HAND_SCALE_FACTOR}px`;
   const dynamicGreenPadding = `${Math.max(12, Math.round(windowSize.height * 0.018))}px ${Math.max(8, Math.round(windowSize.width * 0.012))}px`;
   const dynamicGap = `${Math.max(10, Math.round(windowSize.height * 0.015))}px`;
   const dynamicColumnGap = `${Math.max(8, Math.round(windowSize.height * 0.012))}px`;
@@ -479,7 +483,7 @@ export default function App() {
     const isActive = activeSlot && activeSlot.target === target && activeSlot.index === index;
     const isBoard = target === "board";
     const maxWidth = isBoard ? dynamicCardMaxWidthBoard : dynamicCardMaxWidthPlayer;
-    const minWidth = isBoard ? "38px" : "28px";
+    const minWidth = isBoard ? "38px" : dynamicCardMinWidthPlayer;
     return {
       width: "100%", maxWidth, minWidth, aspectRatio: "3 / 4.2", cursor: isLoading ? "not-allowed" : "pointer", position: "relative", borderRadius: "6px", transition: "all 0.15s ease-in-out", containerType: "inline-size",
       outline: isActive ? "3px solid #ffc107" : "none", outlineOffset: isActive ? "2px" : "0px", boxShadow: isActive ? "0 0 12px rgba(255,193,7,0.6)" : "none", transform: isActive ? "scale(1.04)" : "scale(1)", opacity: isLoading ? 0.7 : 1, backgroundColor: "rgba(255,255,255,0.1)", display: "flex", justifyContent: "center", alignItems: "center", boxSizing: "border-box"

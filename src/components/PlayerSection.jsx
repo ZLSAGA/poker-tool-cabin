@@ -8,10 +8,22 @@ const closeBtnStyle = {
   position: "absolute", top: "-6px", right: "-6px", width: "18px", height: "18px", borderRadius: "50%", backgroundColor: "#000000", color: "white", border: "1px solid white", fontSize: "11px", fontWeight: "bold", display: "flex", justifyContent: "center", alignItems: "center", cursor: "pointer", zIndex: 10, boxShadow: "0 2px 4px rgba(0,0,0,0.2)", padding: 0, lineHeight: 1
 };
 
-function RangeCardPlaceholder({ label }) {
+function RangeCardPlaceholder({ label, slotStyle }) {
   return (
     <div className="card-slot" style={{
-      width: "100%", maxWidth: "75px", minWidth: "40px", aspectRatio: "3 / 4.2", backgroundColor: "#2c3e50", borderRadius: "8px", boxShadow: "0 3px 8px rgba(0,0,0,0.3)", display: "flex", justifyContent: "center", alignItems: "center", border: "2px solid #ecf0f1", color: "white", fontWeight: "bold", fontSize: "14px", userSelect: "none", boxSizing: "border-box"
+      ...slotStyle,
+      backgroundColor: "#2c3e50",
+      borderRadius: "8px",
+      boxShadow: "0 3px 8px rgba(0,0,0,0.3)",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      border: "2px solid #ecf0f1",
+      color: "white",
+      fontWeight: "bold",
+      fontSize: "14px",
+      userSelect: "none",
+      boxSizing: "border-box"
     }}>
       {label}
     </div>
@@ -48,8 +60,8 @@ export default function PlayerSection({ isLoading, p1Select, setP1Select, p2Sele
           </>
         ) : (
           <>
-            <RangeCardPlaceholder label={getRangeLabel(selectValue)} />
-            <RangeCardPlaceholder label={getRangeLabel(selectValue)} />
+            <RangeCardPlaceholder label={getRangeLabel(selectValue)} slotStyle={getSlotStyle(target, 0)} />
+            <RangeCardPlaceholder label={getRangeLabel(selectValue)} slotStyle={getSlotStyle(target, 1)} />
           </>
         )}
       </div>

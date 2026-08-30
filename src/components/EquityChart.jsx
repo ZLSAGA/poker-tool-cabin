@@ -208,19 +208,25 @@ export default function EquityChart({ historyData, style }) {
         </button>
       </div>
 
-      {/* 成立役タブ選択時の P1 / P2 識別ガイド */}
-      {activeTab === 'hands' && (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', marginBottom: '6px', fontSize: '11px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#93c5fd', fontWeight: 'bold' }}>
-            <span style={{ width: '8px', height: '8px', backgroundColor: '#3b82f6', borderRadius: '50%', display: 'inline-block' }} />
-            左バー: Player 1
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#fca5a5', fontWeight: 'bold' }}>
-            <span style={{ width: '8px', height: '8px', backgroundColor: '#ef4444', borderRadius: '50%', display: 'inline-block' }} />
-            右バー: Player 2
-          </div>
+      {/* 成立役タブ選択時の P1 / P2 識別ガイド（表示切り替え時もレイアウト高さを一定に保つため領域を保持） */}
+      <div style={{
+        display: 'flex',
+        justify: 'center',
+        alignItems: 'center',
+        gap: '16px',
+        marginBottom: '6px',
+        fontSize: '11px',
+        visibility: activeTab === 'hands' ? 'visible' : 'hidden'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#93c5fd', fontWeight: 'bold' }}>
+          <span style={{ width: '8px', height: '8px', backgroundColor: '#3b82f6', borderRadius: '50%', display: 'inline-block' }} />
+          左バー: Player 1
         </div>
-      )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#fca5a5', fontWeight: 'bold' }}>
+          <span style={{ width: '8px', height: '8px', backgroundColor: '#ef4444', borderRadius: '50%', display: 'inline-block' }} />
+          右バー: Player 2
+        </div>
+      </div>
 
       {/* グラフエリア */}
       <div ref={containerRef} style={{ width: '100%', height: 'clamp(220px, 34vh, 420px)', position: 'relative' }}>
@@ -269,17 +275,24 @@ export default function EquityChart({ historyData, style }) {
         </ResponsiveContainer>
       </div>
 
-      {/* 成立役タブ選択時の凡例表示 */}
-      {activeTab === 'hands' && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '8px', marginTop: '8px', paddingTop: '6px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-          {Object.entries(HAND_LABELS).map(([key, label]) => (
-            <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10.5px', color: '#cbd5e1' }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: HAND_COLORS[key] }} />
-              <span>{label}</span>
-            </div>
-          ))}
-        </div>
-      )}
+      {/* 成立役タブ選択時の凡例表示（表示切り替え時もレイアウト高さを一定に保つため領域を保持） */}
+      <div style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        justify: 'center',
+        gap: '8px',
+        marginTop: '8px',
+        paddingTop: '6px',
+        borderTop: activeTab === 'hands' ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
+        visibility: activeTab === 'hands' ? 'visible' : 'hidden'
+      }}>
+        {Object.entries(HAND_LABELS).map(([key, label]) => (
+          <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10.5px', color: '#cbd5e1' }}>
+            <span style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: HAND_COLORS[key] }} />
+            <span>{label}</span>
+          </div>
+        ))}
+      </div>
 
     </div>
   );
