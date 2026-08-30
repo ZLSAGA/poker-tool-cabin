@@ -5,7 +5,7 @@ const miniLabelStyle = {
   display: "block", fontSize: "9px", color: "#cbd5e1", textAlign: "center", marginTop: "4px", textTransform: "uppercase", letterSpacing: "0.5px"
 };
 const dividerStyle = {
-  width: "1px", height: "35px", backgroundColor: "rgba(255, 255, 255, 0.25)", margin: "0 2px", alignSelf: "flex-start", marginTop: "13px"
+  width: "1px", height: "55px", backgroundColor: "rgba(255, 255, 255, 0.25)", margin: "0 2px", alignSelf: "flex-start", marginTop: "16px"
 };
 const closeBtnStyle = {
   position: "absolute", top: "-6px", right: "-6px", width: "18px", height: "18px", borderRadius: "50%", backgroundColor: "#000000", color: "white", border: "1px solid white", fontSize: "11px", fontWeight: "bold", display: "flex", justifyContent: "center", alignItems: "center", cursor: "pointer", zIndex: 10, boxShadow: "0 2px 4px rgba(0,0,0,0.2)", padding: 0, lineHeight: 1
@@ -65,12 +65,12 @@ export default function CommunityBoard({
   };
 
   return (
-    <div style={{ marginBottom: "5px", textAlign: "center", width: "100%" }}>
-      <h3 style={{ borderBottom: "2px solid rgba(255,255,255,0.15)", paddingBottom: "6px", color: "#ffc107", marginTop: 0, fontSize: "13px", letterSpacing: "1px" }}>
+    <div style={{ marginBottom: "2px", textAlign: "center", width: "100%" }}>
+      <h3 style={{ borderBottom: "2px solid rgba(255,255,255,0.15)", paddingBottom: "3px", color: "#ffc107", marginTop: 0, marginBottom: "4px", fontSize: "12px", letterSpacing: "1px" }}>
         COMMUNITY BOARD
       </h3>
 
-      <div style={{ display: "flex", justifyContent: "center", gap: "8px", alignItems: "flex-start", marginTop: "12px", width: "100%", maxWidth: "360px", margin: "12px auto 0" }}>
+      <div style={{ display: "flex", justifyContent: "center", gap: "8px", alignItems: "flex-start", marginTop: "4px", width: "100%", maxWidth: "450px", margin: "4px auto 0" }}>
         {/* Flop 1 ~ 3 */}
         {[0, 1, 2].map((idx) => {
           const isInvalid = invalidBoardSlots.includes(idx);
@@ -154,13 +154,13 @@ export default function CommunityBoard({
       {/* アウツ表示領域 (outs が存在するときだけ安全に描画) */}
       {outs && (outs.p1?.length > 0 || outs.p2?.length > 0 || outs.chop?.length > 0) && (
         <div style={{ 
-          marginTop: "20px", 
+          marginTop: "6px", 
           display: "flex", 
           flexDirection: "column", 
-          gap: "8px", 
+          gap: "4px", 
           backgroundColor: "rgba(0,0,0,0.3)", 
-          padding: "12px", 
-          borderRadius: "10px", 
+          padding: "6px 8px", 
+          borderRadius: "8px", 
           textAlign: "left" 
         }}>
           {/* P1 アウツ */}

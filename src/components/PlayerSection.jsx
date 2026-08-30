@@ -20,8 +20,8 @@ function RangeCardPlaceholder({ label }) {
 
 export default function PlayerSection({ isLoading, p1Select, setP1Select, p2Select, setP2Select, p1Hand, p2Hand, setActiveSlot, getSlotStyle, getRangeLabel, result, handleClearSpecificSlot }) {
   const renderPlayer = (id, selectValue, setSelectValue, hand, target) => (
-    <div style={{ textAlign: "center", backgroundColor: "rgba(0,0,0,0.25)", padding: "10px 6px", borderRadius: "10px", width: "49%", minWidth: "0" }}>
-      <h4 style={{ margin: "0 0 8px 0", fontSize: "13px" }}>Player {id}</h4>
+    <div style={{ textAlign: "center", backgroundColor: "rgba(0,0,0,0.25)", padding: "6px 4px", borderRadius: "8px", width: "49%", minWidth: "0" }}>
+      <h4 style={{ margin: "0 0 4px 0", fontSize: "12px" }}>Player {id}</h4>
       <select disabled={isLoading} value={selectValue} onChange={(e) => setSelectValue(e.target.value)} style={playerSelectStyle}>
         <option value="custom">カスタムハンド</option>
         <option value="strong">レンジ: 強 (11%)</option>
@@ -30,7 +30,7 @@ export default function PlayerSection({ isLoading, p1Select, setP1Select, p2Sele
         <option value="any">レンジ: Any (100%)</option>
         <option value="myRange">マイレンジ</option>
       </select>
-      <div style={{ display: "flex", justifyContent: "center", gap: "6%", marginTop: "8px", width: "100%" }}>
+      <div style={{ display: "flex", justifyContent: "center", gap: "6%", marginTop: "6px", width: "100%" }}>
         {selectValue === "custom" ? (
           <>
             <div className="card-slot" onClick={() => !isLoading && setActiveSlot({ target, index: 0 })} style={getSlotStyle(target, 0)}>
@@ -58,17 +58,17 @@ export default function PlayerSection({ isLoading, p1Select, setP1Select, p2Sele
 
   return (
     <>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", marginTop: "25px", flexWrap: "nowrap" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", marginTop: "8px", flexWrap: "nowrap" }}>
         {renderPlayer(1, p1Select, setP1Select, p1Hand, "p1")}
         {renderPlayer(2, p2Select, setP2Select, p2Hand, "p2")}
       </div>
 
 {result && (
   <div style={{
-    marginTop: "15px",
+    marginTop: "6px",
     backgroundColor: "rgba(0, 0, 0, 0.35)",
-    padding: "12px 16px",
-    borderRadius: "10px",
+    padding: "6px 10px",
+    borderRadius: "8px",
     width: "100%",
     boxSizing: "border-box"
   }}>
