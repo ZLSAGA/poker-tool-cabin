@@ -204,7 +204,7 @@ export default function EquityChart({ historyData, style }) {
       )}
 
       {/* グラフエリア */}
-      <div style={{ width: '100%', height: '260px', position: 'relative' }}>
+      <div style={{ width: '100%', height: 'clamp(220px, 34vh, 420px)', position: 'relative' }}>
         <ResponsiveContainer width="100%" height="100%">
           {activeTab === 'equity' ? (
             /* --- 1. 勝率推移グラフ (折れ線) --- */

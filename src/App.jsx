@@ -155,15 +155,23 @@ export default function App() {
   const [callAmount, setCallAmount] = useState("5");
   const [equityHistory, setEquityHistory] = useState(null);
   const [invalidBoardSlots, setInvalidBoardSlots] = useState([]);
-  const [windowWidth, setWindowWidth] = useState(typeof window !== "undefined" ? window.innerWidth : 1024);
+  const [windowSize, setWindowSize] = useState({
+    width: typeof window !== "undefined" ? window.innerWidth : 1024,
+    height: typeof window !== "undefined" ? window.innerHeight : 768
+  });
 
   useEffect(() => {
-    const handleResize = () => setWindowWidth(window.innerWidth);
+    const handleResize = () => {
+      setWindowSize({
+        width: window.innerWidth,
+        height: window.innerHeight
+      });
+    };
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const isPc = windowWidth >= 900;
+  const isPc = windowSize.width >= 900;
 
   const usedCards = [
     ...(p1Select === "custom" ? p1Hand.filter(Boolean) : []),
@@ -459,11 +467,21 @@ export default function App() {
     }, 50);
   };
 
+  // ウィンドウサイズに応じた動的計算
+  const dynamicCardMaxWidthBoard = `${Math.min(85, Math.max(42, Math.round(windowSize.width * 0.052)))}px`;
+  const dynamicCardMaxWidthPlayer = `${Math.min(65, Math.max(32, Math.round(windowSize.width * 0.040)))}px`;
+  const dynamicGreenPadding = `${Math.max(12, Math.round(windowSize.height * 0.018))}px ${Math.max(8, Math.round(windowSize.width * 0.012))}px`;
+  const dynamicGap = `${Math.max(10, Math.round(windowSize.height * 0.015))}px`;
+  const dynamicColumnGap = `${Math.max(8, Math.round(windowSize.height * 0.012))}px`;
+  const dynamicGreenMinHeight = `${Math.max(460, Math.round(windowSize.height * 0.68))}px`;
+
   const getSlotStyle = (target, index) => {
     const isActive = activeSlot && activeSlot.target === target && activeSlot.index === index;
     const isBoard = target === "board";
+    const maxWidth = isBoard ? dynamicCardMaxWidthBoard : dynamicCardMaxWidthPlayer;
+    const minWidth = isBoard ? "38px" : "28px";
     return {
-      width: "100%", maxWidth: isBoard ? "78px" : "58px", minWidth: isBoard ? "50px" : "36px", aspectRatio: "3 / 4.2", cursor: isLoading ? "not-allowed" : "pointer", position: "relative", borderRadius: "6px", transition: "all 0.15s ease-in-out", containerType: "inline-size",
+      width: "100%", maxWidth, minWidth, aspectRatio: "3 / 4.2", cursor: isLoading ? "not-allowed" : "pointer", position: "relative", borderRadius: "6px", transition: "all 0.15s ease-in-out", containerType: "inline-size",
       outline: isActive ? "3px solid #ffc107" : "none", outlineOffset: isActive ? "2px" : "0px", boxShadow: isActive ? "0 0 12px rgba(255,193,7,0.6)" : "none", transform: isActive ? "scale(1.04)" : "scale(1)", opacity: isLoading ? 0.7 : 1, backgroundColor: "rgba(255,255,255,0.1)", display: "flex", justifyContent: "center", alignItems: "center", boxSizing: "border-box"
     };
   };
@@ -474,24 +492,24 @@ export default function App() {
 
   return (
     <div style={{ position: "relative", top: 0, left: 0, width: "100%", minHeight: "100vh", margin: 0, padding: 0, fontFamily: "sans-serif", backgroundColor: "#f4f6f9", boxSizing: "border-box" }}>
-      {/* 1行にまとめたコンパクトなヘッダー */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px", padding: "4px 8px" }}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
-          <h1 style={{ color: "#222", margin: 0, fontSize: "15px", fontWeight: "bold" }}>ポーカー勝率シミュレータ</h1>
-          <span style={{ color: "#64748b", fontSize: "10.5px" }}>枠選択→下部ポップアップでカード配置</span>
+      {/* ウィンドウサイズに応じて動的に計算されるヘッダー */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5vh", padding: `${Math.max(4, Math.round(windowSize.height * 0.006))}px ${Math.max(8, Math.round(windowSize.width * 0.012))}px` }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: `${Math.max(6, Math.round(windowSize.width * 0.008))}px` }}>
+          <h1 style={{ color: "#222", margin: 0, fontSize: "clamp(16px, 1.8vw, 24px)", fontWeight: "bold" }}>ポーカー勝率シミュレータ</h1>
+          <span style={{ color: "#64748b", fontSize: "clamp(10px, 1.1vw, 14px)" }}>枠選択→下部ポップアップでカード配置</span>
         </div>
         <button
           onClick={() => setIsHelpOpen(true)}
           style={{
             display: "flex",
             alignItems: "center",
-            gap: "3px",
+            gap: "4px",
             backgroundColor: "#ffffff",
             color: "#1e293b",
             border: "1px solid #cbd5e1",
-            borderRadius: "14px",
-            padding: "2px 8px",
-            fontSize: "10.5px",
+            borderRadius: "16px",
+            padding: "4px 10px",
+            fontSize: "clamp(10px, 1.1vw, 13px)",
             fontWeight: "bold",
             cursor: "pointer",
             boxShadow: "0 1px 2px rgba(0,0,0,0.06)"
@@ -505,18 +523,20 @@ export default function App() {
 
         <div style={{
           backgroundColor: "#155724",
-          padding: "8px 8px",
+          padding: dynamicGreenPadding,
+          minHeight: dynamicGreenMinHeight,
           borderRadius: "0px",
           boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
           color: "white",
-          marginBottom: "6px",
+          marginBottom: "0.5vh",
           display: "flex",
           flexDirection: isPc ? "row" : "column",
-          gap: "10px",
-          alignItems: "stretch"
+          gap: dynamicGap,
+          alignItems: "stretch",
+          boxSizing: "border-box"
         }}>
           {/* 左カラム */}
-          <div style={{ flex: isPc ? "1 1 50%" : "none", display: "flex", flexDirection: "column", justifyContent: "flex-start", gap: "6px" }}>
+          <div style={{ flex: isPc ? "1 1 50%" : "none", display: "flex", flexDirection: "column", justifyContent: "flex-start", gap: dynamicColumnGap }}>
             <CommunityBoard board={board} isLoading={isLoading} activeSlot={activeSlot} setActiveSlot={setActiveSlot} getSlotStyle={getSlotStyle} outs={outs} SUITS={SUITS} handleClearSpecificSlot={handleClearSpecificSlot} invalidBoardSlots={invalidBoardSlots}/>
             <ExposedSection exposedCards={exposedCards} isLoading={isLoading} activeSlot={activeSlot} setActiveSlot={setActiveSlot} getSlotStyle={getSlotStyle} handleClearSpecificSlot={handleClearSpecificSlot} />
             <PlayerSection isLoading={isLoading} p1Select={p1Select} setP1Select={setP1Select} p2Select={p2Select} setP2Select={setP2Select} p1Hand={p1Hand} p2Hand={p2Hand} setActiveSlot={setActiveSlot} getSlotStyle={getSlotStyle} getRangeLabel={getRangeLabel} result={result} handleClearSpecificSlot={handleClearSpecificSlot} />
@@ -532,8 +552,8 @@ export default function App() {
                 padding: "6px 10px",
                 borderRadius: "6px",
                 textAlign: "center",
-                marginTop: "6px",
-                fontSize: "11.5px",
+                marginTop: "0.5vh",
+                fontSize: "clamp(10px, 1vw, 13px)",
                 whiteSpace: "pre-line"
               }}>
                 {errorMessage}
@@ -541,7 +561,7 @@ export default function App() {
             )}
 
             {/* ハンドの真下に計算ボタンを配置 */}
-            <button onClick={handleCalculate} disabled={isLoading} style={{ width: "100%", marginTop: "6px", backgroundColor: isLoading ? "#64748b" : "#2563eb", color: "white", border: "none", padding: "8px 12px", borderRadius: "6px", fontSize: "13px", fontWeight: "bold", cursor: isLoading ? "not-allowed" : "pointer", boxShadow: isLoading ? "none" : "0 2px 4px rgba(37, 99, 235, 0.2)", transition: "all 0.15s ease" }}>
+            <button onClick={handleCalculate} disabled={isLoading} style={{ width: "100%", marginTop: "0.6vh", backgroundColor: isLoading ? "#64748b" : "#2563eb", color: "white", border: "none", padding: "8px 12px", borderRadius: "6px", fontSize: "clamp(11px, 1.2vw, 15px)", fontWeight: "bold", cursor: isLoading ? "not-allowed" : "pointer", boxShadow: isLoading ? "none" : "0 2px 4px rgba(37, 99, 235, 0.2)", transition: "all 0.15s ease" }}>
               {isLoading ? "確率を計算中..." : "勝率を計算する"}
             </button>
           </div>
@@ -552,12 +572,12 @@ export default function App() {
               <EquityChart historyData={equityHistory} style={{ display: "flex", flexDirection: "column", justifyContent: "center" }} />
             ) : (
               <div style={{
-                height: "100%", minHeight: "280px", border: "2px dashed rgba(255,255,255,0.25)", borderRadius: "12px",
-                display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "30px 20px",
+                height: "100%", minHeight: "clamp(180px, 28vh, 320px)", border: "2px dashed rgba(255,255,255,0.25)", borderRadius: "12px",
+                display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "20px 16px",
                 textAlign: "center", color: "rgba(255,255,255,0.6)", backgroundColor: "rgba(0,0,0,0.18)", boxSizing: "border-box"
               }}>
-                <span style={{ fontSize: "14px", fontWeight: "bold", color: "#ffc107", letterSpacing: "0.5px" }}>EQUITY & HAND ANALYZER</span>
-                <span style={{ fontSize: "12px", marginTop: "8px", maxWidth: "280px", lineHeight: "1.5", color: "#cbd5e1" }}>
+                <span style={{ fontSize: "clamp(12px, 1.3vw, 16px)", fontWeight: "bold", color: "#ffc107", letterSpacing: "0.5px" }}>EQUITY & HAND ANALYZER</span>
+                <span style={{ fontSize: "clamp(10px, 1vw, 13px)", marginTop: "8px", maxWidth: "280px", lineHeight: "1.5", color: "#cbd5e1" }}>
                   カードをセットして「勝率を計算する」をクリックすると、ここにストリートごとの推移チャートが表示されます。
                 </span>
               </div>
@@ -570,7 +590,7 @@ export default function App() {
 
         {/* コントロールパネル */}
         <div style={{ textAlign: "center" }}>
-          <div style={{ marginTop: "4px", display: "flex", gap: "8px", justifyContent: "center" }}>
+          <div style={{ marginTop: "0.5vh", display: "flex", gap: dynamicGap, justifyContent: "center" }}>
             <button
               onClick={handleUndo}
               disabled={history.length === 0 || isLoading}
@@ -578,16 +598,16 @@ export default function App() {
                 flex: 1, backgroundColor: (history.length === 0 || isLoading) ? "#f1f5f9" : "#e0f2fe",
                 color: (history.length === 0 || isLoading) ? "#94a3b8" : "#0369a1",
                 border: (history.length === 0 || isLoading) ? "1px solid #cbd5e1" : "1px solid #bae6fd",
-                padding: "8px 6px", fontSize: "12px", borderRadius: "6px", fontWeight: "bold",
+                padding: "8px 6px", fontSize: "clamp(10px, 1.1vw, 13px)", borderRadius: "6px", fontWeight: "bold",
                 cursor: (history.length === 0 || isLoading) ? "not-allowed" : "pointer"
               }}
             >
               戻る ({history.length})
             </button>
-            <button disabled={isLoading} onClick={() => setIsRangeModalOpen(true)} style={{ flex: 1, backgroundColor: "#f8fafc", color: "#475569", border: "1px solid #cbd5e1", padding: "8px 6px", fontSize: "12px", borderRadius: "6px", fontWeight: "bold", cursor: isLoading ? "not-allowed" : "pointer" }}>
+            <button disabled={isLoading} onClick={() => setIsRangeModalOpen(true)} style={{ flex: 1, backgroundColor: "#f8fafc", color: "#475569", border: "1px solid #cbd5e1", padding: "8px 6px", fontSize: "clamp(10px, 1.1vw, 13px)", borderRadius: "6px", fontWeight: "bold", cursor: isLoading ? "not-allowed" : "pointer" }}>
               マイレンジ設定
             </button>
-            <button disabled={isLoading} onClick={handleClearAll} style={{ flex: 1, backgroundColor: "#fee2e2", color: "#ef4444", border: "1px solid #fca5a5", padding: "8px 6px", fontSize: "12px", borderRadius: "6px", fontWeight: "bold", cursor: isLoading ? "not-allowed" : "pointer" }}>
+            <button disabled={isLoading} onClick={handleClearAll} style={{ flex: 1, backgroundColor: "#fee2e2", color: "#ef4444", border: "1px solid #fca5a5", padding: "8px 6px", fontSize: "clamp(10px, 1.1vw, 13px)", borderRadius: "6px", fontWeight: "bold", cursor: isLoading ? "not-allowed" : "pointer" }}>
               盤面を全消去
             </button>
           </div>
