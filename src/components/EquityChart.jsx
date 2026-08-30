@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   LineChart,
   Line,
@@ -147,6 +147,25 @@ const CustomBarTooltip = ({ active, payload, label }) => {
 
 export default function EquityChart({ historyData, style }) {
   const [activeTab, setActiveTab] = useState('equity'); // 'equity' | 'hands'
+  const containerRef = useRef(null);
+  const [containerWidth, setContainerWidth] = useState(0);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setContainerWidth(entry.contentRect.width);
+      }
+    });
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  // River到達時 (全4カテゴリ分割) と同じ割合のバー太さをプロット領域幅から動的計算
+  const plotWidth = Math.max(0, containerWidth - 30);
+  const calculatedBarSize = containerWidth > 0
+    ? Math.max(10, Math.round(((plotWidth / 4) * 0.6) / 2))
+    : undefined;
 
   return (
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', ...style }}>
@@ -204,7 +223,7 @@ export default function EquityChart({ historyData, style }) {
       )}
 
       {/* グラフエリア */}
-      <div style={{ width: '100%', height: 'clamp(220px, 34vh, 420px)', position: 'relative' }}>
+      <div ref={containerRef} style={{ width: '100%', height: 'clamp(220px, 34vh, 420px)', position: 'relative' }}>
         <ResponsiveContainer width="100%" height="100%">
           {activeTab === 'equity' ? (
             /* --- 1. 勝率推移グラフ (折れ線) --- */
@@ -221,7 +240,7 @@ export default function EquityChart({ historyData, style }) {
             </LineChart>
           ) : (
             /* --- 2. 成立役の推移グラフ (Player 1 & 2 横並び積み上げバー) --- */
-            <BarChart data={historyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} barGap={2}>
+            <BarChart data={historyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} barGap={2} barSize={calculatedBarSize}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
               <XAxis dataKey="label" stroke="#94a3b8" tick={{ fill: "#94a3b8", fontSize: 12 }} />
               <YAxis stroke="#94a3b8" tick={{ fill: "#94a3b8", fontSize: 12 }} domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} unit="%" />
