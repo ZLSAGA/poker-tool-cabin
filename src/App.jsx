@@ -588,7 +588,7 @@ export default function App() {
             )}
 
             {/* 勝率推移・成立役推移のすぐ下に配置 */}
-            <PotOddsCalculator isLoading={isLoading} potSize={potSize} setPotSize={setPotSize} callAmount={callAmount} setCallAmount={setCallAmount} result={result} equityHistory={equityHistory} />
+            <PotOddsCalculator isLoading={isLoading} potSize={potSize} setPotSize={setPotSize} callAmount={callAmount} setCallAmount={setCallAmount} result={result} equityHistory={equityHistory} windowSize={windowSize} />
           </div>
         </div>
 
