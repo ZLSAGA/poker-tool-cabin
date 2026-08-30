@@ -127,19 +127,62 @@ function runMonteCarlo(p1, p2, board, iterations, exposedCards = []) {
   const baseDeck = createDeck();
   const needCards = 5 - board.length;
 
+  const boardAndExposed = new Set([...board, ...exposedCards]);
+
+  const validP1Combos = p1.isRange
+    ? (p1.range || []).filter(c => !boardAndExposed.has(c[0]) && !boardAndExposed.has(c[1]))
+    : (p1.hand && p1.hand.length === 2 && !p1.hand.some(c => boardAndExposed.has(c)) ? [p1.hand] : []);
+
+  const validP2Combos = p2.isRange
+    ? (p2.range || []).filter(c => !boardAndExposed.has(c[0]) && !boardAndExposed.has(c[1]))
+    : (p2.hand && p2.hand.length === 2 && !p2.hand.some(c => boardAndExposed.has(c)) ? [p2.hand] : []);
+
+  if (validP1Combos.length === 0 || validP2Combos.length === 0) {
+    return { p1Equity: 0, p2Equity: 0, p1Win: 0, p2Win: 0, tie: 0 };
+  }
+
+  // 重複のないハンド組み合わせが少なくとも1つ存在するか確認
+  let hasPair = false;
+  for (let i = 0; i < validP1Combos.length; i++) {
+    const h10 = validP1Combos[i][0];
+    const h11 = validP1Combos[i][1];
+    for (let j = 0; j < validP2Combos.length; j++) {
+      const h20 = validP2Combos[j][0];
+      const h21 = validP2Combos[j][1];
+      if (h10 !== h20 && h10 !== h21 && h11 !== h20 && h11 !== h21) {
+        hasPair = true;
+        break;
+      }
+    }
+    if (hasPair) break;
+  }
+
+  if (!hasPair) {
+    return { p1Equity: 0, p2Equity: 0, p1Win: 0, p2Win: 0, tie: 0 };
+  }
+
+  let validSimulations = 0;
+  let consecutiveFailures = 0;
+  const maxConsecutiveFailures = 1000;
+
   for (let i = 0; i < iterations; i++) {
-    let hand1 = p1.isRange ? p1.range[Math.floor(Math.random() * p1.range.length)] : p1.hand;
-    let hand2 = p2.isRange ? p2.range[Math.floor(Math.random() * p2.range.length)] : p2.hand;
+    const hand1 = validP1Combos[Math.floor(Math.random() * validP1Combos.length)];
+    const hand2 = validP2Combos[Math.floor(Math.random() * validP2Combos.length)];
 
-    if (!hand1 || !hand2) return { p1Equity: 0, p2Equity: 0, p1Win: 0, p2Win: 0, tie: 0 };
+    if (!hand1 || !hand2) continue;
 
-    const usedCardKeys = [...hand1, ...hand2, ...board, ...exposedCards]; // ★ デッドカード追加
-    const uniqueCards = new Set(usedCardKeys);
-    
-    if (uniqueCards.size !== usedCardKeys.length) {
+    // hand1 と hand2 の重複チェック
+    if (hand1[0] === hand2[0] || hand1[0] === hand2[1] || hand1[1] === hand2[0] || hand1[1] === hand2[1]) {
+      consecutiveFailures++;
+      if (consecutiveFailures > maxConsecutiveFailures) {
+        break;
+      }
       i--;
       continue;
     }
+    consecutiveFailures = 0;
+
+    const usedCardKeys = [...hand1, ...hand2, ...board, ...exposedCards];
 
     let finalBoard = [...board];
     if (needCards > 0) {
@@ -155,14 +198,17 @@ function runMonteCarlo(p1, p2, board, iterations, exposedCards = []) {
     if (result === 1) p1Wins++;
     else if (result === 2) p2Wins++;
     else ties++;
+    validSimulations++;
   }
 
+  const total = validSimulations > 0 ? validSimulations : 1;
+
   return {
-    p1Equity: ((p1Wins + ties * 0.5) / iterations) * 100,
-    p2Equity: ((p2Wins + ties * 0.5) / iterations) * 100,
-    p1Win: (p1Wins / iterations) * 100,
-    p2Win: (p2Wins / iterations) * 100,
-    tie: (ties / iterations) * 100,
+    p1Equity: ((p1Wins + ties * 0.5) / total) * 100,
+    p2Equity: ((p2Wins + ties * 0.5) / total) * 100,
+    p1Win: (p1Wins / total) * 100,
+    p2Win: (p2Wins / total) * 100,
+    tie: (ties / total) * 100,
   };
 }
 

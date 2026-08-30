@@ -120,7 +120,7 @@ export default function PotOddsCalculator({ isLoading, potSize, setPotSize, call
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: dynamicGap, fontSize: dynamicLabelFontSize }}>
                       {/* Player 1 */}
                       {(() => {
-                        const p1Val = currentItem.p1 || 0;
+                        const p1Val = currentItem.p1Equity !== undefined ? currentItem.p1Equity : (currentItem.p1 || 0);
                         const diff = p1Val - requiredEquity;
                         const isPositive = diff >= 0;
                         return (
@@ -148,7 +148,7 @@ export default function PotOddsCalculator({ isLoading, potSize, setPotSize, call
 
                       {/* Player 2 */}
                       {(() => {
-                        const p2Val = currentItem.p2 || 0;
+                        const p2Val = currentItem.p2Equity !== undefined ? currentItem.p2Equity : (currentItem.p2 || 0);
                         const diff = p2Val - requiredEquity;
                         const isPositive = diff >= 0;
                         return (

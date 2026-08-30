@@ -57,20 +57,39 @@ function calculateHandDistribution(p1Data, p2Data, currentBoard, samples = 500) 
   const p1Counts = { highCard: 0, onePair: 0, twoPair: 0, threeCard: 0, straight: 0, flush: 0, fullHousePlus: 0 };
   const p2Counts = { highCard: 0, onePair: 0, twoPair: 0, threeCard: 0, straight: 0, flush: 0, fullHousePlus: 0 };
 
-  const getHandFromData = (pData) => {
+  const getValidCombos = (pData) => {
     if (pData.isRange) {
-      return pData.range[Math.floor(Math.random() * pData.range.length)];
+      return (pData.range || []).filter(c => !currentBoard.includes(c[0]) && !currentBoard.includes(c[1]));
     }
-    return pData.hand;
+    if (pData.hand && pData.hand.length === 2 && !pData.hand.some(c => currentBoard.includes(c))) {
+      return [pData.hand];
+    }
+    return [];
   };
 
-  for (let i = 0; i < samples; i++) {
-    const h1 = getHandFromData(p1Data);
-    const h2 = getHandFromData(p2Data);
-    
-    const used = new Set([...h1, ...h2, ...currentBoard]);
-    if (used.size < h1.length + h2.length + currentBoard.length) continue;
+  const validP1 = getValidCombos(p1Data);
+  const validP2 = getValidCombos(p2Data);
 
+  if (validP1.length === 0 || validP2.length === 0) {
+    const emptyDist = { highCard: 0, onePair: 0, twoPair: 0, threeCard: 0, straight: 0, flush: 0, fullHousePlus: 0 };
+    return { p1: emptyDist, p2: emptyDist };
+  }
+
+  let validCount = 0;
+  let consecutiveFailures = 0;
+
+  for (let i = 0; i < samples; i++) {
+    const h1 = validP1[Math.floor(Math.random() * validP1.length)];
+    const h2 = validP2[Math.floor(Math.random() * validP2.length)];
+    
+    if (h1[0] === h2[0] || h1[0] === h2[1] || h1[1] === h2[0] || h1[1] === h2[1]) {
+      consecutiveFailures++;
+      if (consecutiveFailures > 100) break;
+      continue;
+    }
+    consecutiveFailures = 0;
+
+    const used = new Set([...h1, ...h2, ...currentBoard]);
     const deck = allCards.filter(c => !used.has(c));
     
     const needed = 5 - currentBoard.length;
@@ -85,10 +104,11 @@ function calculateHandDistribution(p1Data, p2Data, currentBoard, samples = 500) 
 
     p1Counts[cat1]++;
     p2Counts[cat2]++;
+    validCount++;
   }
 
   const formatDist = (counts) => {
-    const total = Object.values(counts).reduce((a, b) => a + b, 0) || 1;
+    const total = validCount || 1;
     return {
       highCard: (counts.highCard / total) * 100,
       onePair: (counts.onePair / total) * 100,
@@ -284,27 +304,26 @@ export default function App() {
     const p1Data = getPlayerData(p1Select, p1Hand);
     const p2Data = getPlayerData(p2Select, p2Hand);
 
-    // 重複チェック用のカードセット
-    const usedCardsSet = new Set([...currentBoard, ...deadCards]);
-    if (!p1Data.isRange) p1Hand.forEach((c) => c && usedCardsSet.add(c));
-    if (!p2Data.isRange) p2Hand.forEach((c) => c && usedCardsSet.add(c));
+    // 重複チェック用のカードセット（ボードとデッドカード）
+    const boardAndDeadSet = new Set([...currentBoard, ...deadCards]);
 
-    // 有効なコンボ数を数えるヘルパー関数
-    const getValidCombosCount = (pData) => {
-      if (!pData.isRange || !pData.range) return 0;
-      let count = 0;
-      for (const combo of pData.range) {
-        if (!usedCardsSet.has(combo[0]) && !usedCardsSet.has(combo[1])) {
-          count++;
-        }
+    // 有効なコンボを取得するヘルパー関数
+    const getValidCombosList = (pData) => {
+      if (!pData.isRange) {
+        if (!pData.hand || pData.hand.length < 2 || pData.hand.some(c => boardAndDeadSet.has(c))) return [];
+        return [pData.hand];
       }
-      return count;
+      if (!pData.range) return [];
+      return pData.range.filter(combo => !boardAndDeadSet.has(combo[0]) && !boardAndDeadSet.has(combo[1]));
     };
+
+    const validP1List = getValidCombosList(p1Data);
+    const validP2List = getValidCombosList(p2Data);
 
     if (p1Data.isRange) {
       if (!p1Data.range || p1Data.range.length === 0) {
         errorMessages.push("Player 1: レンジが選択されていません。");
-      } else if (getValidCombosCount(p1Data) === 0) {
+      } else if (validP1List.length === 0) {
         errorMessages.push("Player 1: カードの重複により、計算可能な組み合わせ（コンボ）がありません。");
       }
     }
@@ -312,8 +331,29 @@ export default function App() {
     if (p2Data.isRange) {
       if (!p2Data.range || p2Data.range.length === 0) {
         errorMessages.push("Player 2: レンジが選択されていません。");
-      } else if (getValidCombosCount(p2Data) === 0) {
+      } else if (validP2List.length === 0) {
         errorMessages.push("Player 2: カードの重複により、計算可能な組み合わせ（コンボ）がありません。");
+      }
+    }
+
+    if (errorMessages.length === 0 && (p1Data.isRange || p2Data.isRange)) {
+      let hasValidPair = false;
+      for (let i = 0; i < validP1List.length; i++) {
+        const h10 = validP1List[i][0];
+        const h11 = validP1List[i][1];
+        for (let j = 0; j < validP2List.length; j++) {
+          const h20 = validP2List[j][0];
+          const h21 = validP2List[j][1];
+          if (h10 !== h20 && h10 !== h21 && h11 !== h20 && h11 !== h21) {
+            hasValidPair = true;
+            break;
+          }
+        }
+        if (hasValidPair) break;
+      }
+
+      if (!hasValidPair) {
+        errorMessages.push("カードの重複により、計算可能な組み合わせ（コンボ）がありません。");
       }
     }
 
@@ -408,8 +448,11 @@ export default function App() {
 
           return {
             label,
-            p1: res.p1Equity ?? 0,
-            p2: res.p2Equity ?? 0,
+            p1: res.p1Win ?? 0,
+            p2: res.p2Win ?? 0,
+            tie: res.tie ?? 0,
+            p1Equity: res.p1Equity ?? 0,
+            p2Equity: res.p2Equity ?? 0,
             outs,
             p1_highCard: dist.p1.highCard,
             p1_onePair: dist.p1.onePair,

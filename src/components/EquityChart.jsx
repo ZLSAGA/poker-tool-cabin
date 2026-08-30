@@ -54,23 +54,22 @@ const CustomEquityTooltip = ({ active, payload, label }) => {
           {label}
         </p>
 
-        <p style={{ margin: "2px 0", color: payload[0]?.color, fontWeight: "bold" }}>
-          P1 勝率: {payload[0]?.value ? payload[0].value.toFixed(1) : 0}%
-        </p>
-        <p style={{ margin: "2px 0", color: payload[1]?.color, fontWeight: "bold" }}>
-          P2 勝率: {payload[1]?.value ? payload[1].value.toFixed(1) : 0}%
-        </p>
+        {payload.map((item, index) => (
+          <p key={index} style={{ margin: "2px 0", color: item.color, fontWeight: "bold" }}>
+            {item.name}: {item.value !== undefined ? Number(item.value).toFixed(1) : 0}%
+          </p>
+        ))}
 
         {data.outs && (
           <div style={{ marginTop: "6px", paddingTop: "6px", borderTop: "1px dashed #475569", fontSize: "10.5px" }}>
             <p style={{ margin: "3px 0", color: "#94a3b8" }}>
-              <span style={{ color: payload[0]?.color, fontWeight: "bold" }}>P1 アウツ ({data.outs.p1 ? data.outs.p1.length : 0}枚):</span><br />
+              <span style={{ color: "#3b82f6", fontWeight: "bold" }}>P1 アウツ ({data.outs.p1 ? data.outs.p1.length : 0}枚):</span><br />
               <span style={{ color: "#cbd5e1", display: "block", marginTop: "2px", lineHeight: "1.3", wordWrap: "break-word", whiteSpace: "normal" }}>
                 {data.outs.p1 && data.outs.p1.length > 0 ? data.outs.p1.join(", ") : "なし"}
               </span>
             </p>
             <p style={{ margin: "3px 0", color: "#94a3b8", marginTop: "6px" }}>
-              <span style={{ color: payload[1]?.color, fontWeight: "bold" }}>P2 アウツ ({data.outs.p2 ? data.outs.p2.length : 0}枚):</span><br />
+              <span style={{ color: "#ef4444", fontWeight: "bold" }}>P2 アウツ ({data.outs.p2 ? data.outs.p2.length : 0}枚):</span><br />
               <span style={{ color: "#cbd5e1", display: "block", marginTop: "2px", lineHeight: "1.3", wordWrap: "break-word", whiteSpace: "normal" }}>
                 {data.outs.p2 && data.outs.p2.length > 0 ? data.outs.p2.join(", ") : "なし"}
               </span>
@@ -243,6 +242,7 @@ export default function EquityChart({ historyData, style }) {
               
               <Line type="linear" dataKey="p1" name="Player 1" stroke="#3b82f6" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} animationDuration={350} />
               <Line type="linear" dataKey="p2" name="Player 2" stroke="#ef4444" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} animationDuration={350} />
+              <Line type="linear" dataKey="tie" name="Chop" stroke="#dedddd" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} animationDuration={350} />
             </LineChart>
           ) : (
             /* --- 2. 成立役の推移グラフ (Player 1 & 2 横並び積み上げバー) --- */
