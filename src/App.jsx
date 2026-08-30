@@ -4,7 +4,7 @@ import pokersolver from "pokersolver";
 const { Hand } = pokersolver;
 
 import CommunityBoard from "./components/CommunityBoard";
-import ExposedSection from "./components/ExposedSection"; // ★ インポートを追加
+import ExposedSection from "./components/ExposedSection";
 import PlayerSection from "./components/PlayerSection";
 import PotOddsCalculator from "./components/PotOddsCalculator";
 import CardMatrix from "./components/CardMatrix";
@@ -253,7 +253,7 @@ export default function App() {
     setInvalidBoardSlots([]);
 
     const currentBoard = board.filter((c) => c !== "");
-    const deadCards = exposedCards.filter(Boolean); // ★ 関数直下に移動してスコープ全体で参照可能に
+    const deadCards = exposedCards.filter(Boolean);
     const errorMessages = [];
 
     const flopCards = [board[0], board[1], board[2]];
@@ -272,69 +272,39 @@ export default function App() {
       errorMessages.push("Player 2 のカードを選んでください。");
     }
 
-    const expandRangeToCombos = (rangeList) => {
-      if (!rangeList || !Array.isArray(rangeList)) return [];
-      const expanded = [];
+    // プレイヤーの選択データを取得
+    const p1Data = getPlayerData(p1Select, p1Hand);
+    const p2Data = getPlayerData(p2Select, p2Hand);
 
-      rangeList.forEach((item) => {
-        if (typeof item !== "string") return;
-
-        if (item.length === 4) {
-          expanded.push(item);
-          return;
-        }
-
-        if (item.length === 2 && item[0] === item[1]) {
-          const r = item[0];
-          for (let i = 0; i < SUITS.length; i++) {
-            for (let j = i + 1; j < SUITS.length; j++) {
-              expanded.push(`${r}${SUITS[i].key}${r}${SUITS[j].key}`);
-            }
-          }
-        } else if (item.length === 3 && item[2] === "s") {
-          const r1 = item[0];
-          const r2 = item[1];
-          SUITS.forEach(s => expanded.push(`${r1}${s.key}${r2}${s.key}`));
-        } else if (item.length === 3 && item[2] === "o") {
-          const r1 = item[0];
-          const r2 = item[1];
-          SUITS.forEach(s1 => SUITS.forEach(s2 => {
-            if (s1.key !== s2.key) expanded.push(`${r1}${s1.key}${r2}${s2.key}`);
-          }));
-        }
-      });
-
-      return expanded;
-    };
-
+    // 重複チェック用のカードセット
     const usedCardsSet = new Set([...currentBoard, ...deadCards]);
-    if (p1Select === "custom") p1Hand.forEach((c) => c && usedCardsSet.add(c));
-    if (p2Select === "custom") p2Hand.forEach((c) => c && usedCardsSet.add(c));
+    if (!p1Data.isRange) p1Hand.forEach((c) => c && usedCardsSet.add(c));
+    if (!p2Data.isRange) p2Hand.forEach((c) => c && usedCardsSet.add(c));
 
-    const getValidCombos = (rangeList) => {
-      const allCombos = expandRangeToCombos(rangeList);
-      return allCombos.filter((combo) => {
-        const c1 = combo.slice(0, 2);
-        const c2 = combo.slice(2, 4);
-        return !usedCardsSet.has(c1) && !usedCardsSet.has(c2);
-      });
+    // 有効なコンボ数を数えるヘルパー関数
+    const getValidCombosCount = (pData) => {
+      if (!pData.isRange || !pData.range) return 0;
+      let count = 0;
+      for (const combo of pData.range) {
+        if (!usedCardsSet.has(combo[0]) && !usedCardsSet.has(combo[1])) {
+          count++;
+        }
+      }
+      return count;
     };
 
-    const p1RangeList = p1Select === "myRange" ? myRange : (Array.isArray(p1Select) ? p1Select : []);
-    const p2RangeList = p2Select === "myRange" ? myRange : (Array.isArray(p2Select) ? p2Select : []);
-
-    if (p1Select !== "custom") {
-      if (p1RangeList.length === 0) {
+    if (p1Data.isRange) {
+      if (!p1Data.range || p1Data.range.length === 0) {
         errorMessages.push("Player 1: レンジが選択されていません。");
-      } else if (getValidCombos(p1RangeList).length === 0) {
+      } else if (getValidCombosCount(p1Data) === 0) {
         errorMessages.push("Player 1: カードの重複により、計算可能な組み合わせ（コンボ）がありません。");
       }
     }
 
-    if (p2Select !== "custom") {
-      if (p2RangeList.length === 0) {
+    if (p2Data.isRange) {
+      if (!p2Data.range || p2Data.range.length === 0) {
         errorMessages.push("Player 2: レンジが選択されていません。");
-      } else if (getValidCombos(p2RangeList).length === 0) {
+      } else if (getValidCombosCount(p2Data) === 0) {
         errorMessages.push("Player 2: カードの重複により、計算可能な組み合わせ（コンボ）がありません。");
       }
     }
@@ -347,8 +317,6 @@ export default function App() {
     setIsLoading(true);
     setTimeout(() => {
       try {
-        let p1Data = getPlayerData(p1Select, p1Hand);
-        let p2Data = getPlayerData(p2Select, p2Hand);
         const startTime = performance.now();
         
         const isRangeFight = p1Data.isRange || p2Data.isRange;

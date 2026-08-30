@@ -16,7 +16,7 @@ export default function ExposedSection({
   return (
     <div style={{ marginTop: "15px", textAlign: "center" }}>
       <div style={{ fontSize: "11px", color: "#f8fafc", fontWeight: "bold", letterSpacing: "0.5px", marginBottom: "6px" }}>
-        EXPOSED CARDS (デッドカード)
+        Exposed Cards
       </div>
       <div style={{ display: "flex", justifyContent: "center", gap: "6px", flexWrap: "wrap" }}>
         {exposedCards.map((cardKey, idx) => (
