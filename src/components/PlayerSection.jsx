@@ -94,22 +94,22 @@ export default function PlayerSection({ isLoading, p1Select, setP1Select, p2Sele
       width: "100%"
     }}>
       {/* Player 1（左端揃え） */}
-      <div style={{ color: "#66b0ff", fontSize: "15px", flex: 1, textAlign: "left", whiteSpace: "nowrap" }}>
-        Player 1 <span style={{ fontSize: "18px", marginLeft: "4px" }}>
+      <div style={{ color: "#66b0ff", fontSize: "clamp(10px, 2.6vw, 15px)", flex: "1 1 0", minWidth: 0, textAlign: "left", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+        Player 1 <span style={{ fontSize: "clamp(11px, 3.2vw, 18px)", marginLeft: "2px" }}>
           {(result.p1Win ?? (result.p1Equity - (result.tie || 0) / 2)).toFixed(1)}%
         </span>
       </div>
 
       {/* Chop（中央揃え） */}
-      <div style={{ flex: "0 0 auto", textAlign: "center", padding: "0 8px" }}>
+      <div style={{ flex: "0 0 auto", textAlign: "center", padding: "0 4px" }}>
         {(result.tie ?? 0) > 0.05 && (
           <div style={{
             color: "#d1d1ce",
             backgroundColor: "rgba(132, 132, 132, 0.25)",
             border: "1px solid rgba(113, 113, 112, 0.5)",
-            padding: "2px 8px",
+            padding: "1px 6px",
             borderRadius: "12px",
-            fontSize: "12px",
+            fontSize: "clamp(9px, 2.2vw, 12px)",
             fontWeight: "bold",
             whiteSpace: "nowrap"
           }}>
@@ -119,8 +119,8 @@ export default function PlayerSection({ isLoading, p1Select, setP1Select, p2Sele
       </div>
 
       {/* Player 2（右端揃え） */}
-      <div style={{ color: "#ff6b6b", fontSize: "15px", flex: 1, textAlign: "right", whiteSpace: "nowrap" }}>
-        <span style={{ fontSize: "18px", marginRight: "4px" }}>
+      <div style={{ color: "#ff6b6b", fontSize: "clamp(10px, 2.6vw, 15px)", flex: "1 1 0", minWidth: 0, textAlign: "right", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+        <span style={{ fontSize: "clamp(11px, 3.2vw, 18px)", marginRight: "2px" }}>
           {(result.p2Win ?? (result.p2Equity - (result.tie || 0) / 2)).toFixed(1)}%
         </span> Player 2
       </div>
