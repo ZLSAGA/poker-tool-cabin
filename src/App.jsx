@@ -277,8 +277,6 @@ export default function App() {
   const handleCalculate = () => {
     setErrorMessage("");
     setInvalidBoardSlots([]);
-    // 前回の計算結果 (result, equityHistory, outs) はリセットせずそのまま画面に保持し、
-    // 計算完了時に新しい結果へシームレスに上書き更新する
 
     const currentBoard = board.filter((c) => c !== "");
     const deadCards = exposedCards.filter(Boolean);
@@ -300,14 +298,11 @@ export default function App() {
       errorMessages.push("Player 2 のカードを選んでください。");
     }
 
-    // プレイヤーの選択データを取得
     const p1Data = getPlayerData(p1Select, p1Hand);
     const p2Data = getPlayerData(p2Select, p2Hand);
 
-    // 重複チェック用のカードセット（ボードとデッドカード）
     const boardAndDeadSet = new Set([...currentBoard, ...deadCards]);
 
-    // 有効なコンボを取得するヘルパー関数
     const getValidCombosList = (pData) => {
       if (!pData.isRange) {
         if (!pData.hand || pData.hand.length < 2 || pData.hand.some(c => boardAndDeadSet.has(c))) return [];
@@ -510,7 +505,6 @@ export default function App() {
     }, 50);
   };
 
-  // ウィンドウサイズに応じた動的計算
   const HAND_SCALE_FACTOR = 1.5;
   const dynamicCardMaxWidthBoard = `${Math.min(85, Math.max(42, Math.round(windowSize.width * 0.052)))}px`;
   const baseCardMaxWidthPlayer = Math.min(65, Math.max(32, Math.round(windowSize.width * 0.040)));
@@ -539,7 +533,6 @@ export default function App() {
 
   return (
     <div style={{ position: "relative", top: 0, left: 0, width: "100%", minHeight: "100vh", margin: 0, padding: 0, fontFamily: "sans-serif", backgroundColor: "#f4f6f9", boxSizing: "border-box" }}>
-      {/* ウィンドウサイズに応じて動的に計算されるヘッダー */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5vh", padding: `${Math.max(4, Math.round(windowSize.height * 0.006))}px ${Math.max(8, Math.round(windowSize.width * 0.012))}px` }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: `${Math.max(6, Math.round(windowSize.width * 0.008))}px` }}>
           <h1 style={{ color: "#222", margin: 0, fontSize: "clamp(16px, 1.8vw, 24px)", fontWeight: "bold" }}>ポーカー勝率シミュレータ</h1>
@@ -588,7 +581,6 @@ export default function App() {
             <ExposedSection exposedCards={exposedCards} isLoading={isLoading} activeSlot={activeSlot} setActiveSlot={setActiveSlot} getSlotStyle={getSlotStyle} handleClearSpecificSlot={handleClearSpecificSlot} />
             <PlayerSection isLoading={isLoading} p1Select={p1Select} setP1Select={setP1Select} p2Select={p2Select} setP2Select={setP2Select} p1Hand={p1Hand} p2Hand={p2Hand} setActiveSlot={setActiveSlot} getSlotStyle={getSlotStyle} getRangeLabel={getRangeLabel} result={result} handleClearSpecificSlot={handleClearSpecificSlot} />
             
-            {/* エラー文をハンドと計算ボタンの間に表示 */}
             {errorMessage && (
               <div style={{
                 fontWeight: "bold",
@@ -607,16 +599,19 @@ export default function App() {
               </div>
             )}
 
-            {/* ハンドの真下に計算ボタンを配置 */}
             <button onClick={handleCalculate} disabled={isLoading} style={{ width: "100%", marginTop: "0.6vh", backgroundColor: isLoading ? "#64748b" : "#2563eb", color: "white", border: "none", padding: "8px 12px", borderRadius: "6px", fontSize: "clamp(11px, 1.2vw, 15px)", fontWeight: "bold", cursor: isLoading ? "not-allowed" : "pointer", boxShadow: isLoading ? "none" : "0 2px 4px rgba(37, 99, 235, 0.2)", transition: "all 0.15s ease" }}>
               {isLoading ? "確率を計算中..." : "勝率を計算する"}
             </button>
           </div>
 
-          {/* 右カラム (PC) または 下部 (スマホ) */}
+          {/* 右カラム */}
           <div style={{ flex: isPc ? "1 1 50%" : "none", display: "flex", flexDirection: "column", justifyContent: "flex-start" }}>
             {equityHistory ? (
-              <EquityChart historyData={equityHistory} style={{ display: "flex", flexDirection: "column", justifyContent: "center" }} />
+              <EquityChart 
+                historyData={equityHistory} 
+                boardCards={board} 
+                style={{ display: "flex", flexDirection: "column", justifyContent: "center" }} 
+              />
             ) : (
               <div style={{
                 height: "100%", minHeight: "clamp(180px, 28vh, 320px)", border: "2px dashed rgba(255,255,255,0.25)", borderRadius: "12px",
@@ -630,7 +625,6 @@ export default function App() {
               </div>
             )}
 
-            {/* 勝率推移・成立役推移のすぐ下に配置 */}
             <PotOddsCalculator isLoading={isLoading} potSize={potSize} setPotSize={setPotSize} callAmount={callAmount} setCallAmount={setCallAmount} result={result} equityHistory={equityHistory} windowSize={windowSize} />
           </div>
         </div>

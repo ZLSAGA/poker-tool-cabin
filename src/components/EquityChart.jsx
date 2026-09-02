@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   LineChart,
   Line,
@@ -11,19 +11,20 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
+import { calculateHandScore, getScoreColor, getTextColor } from './pokerEvaluator';
 
-// 役ごとのカラーパレット
+const RANKS = ['A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2'];
+
 const HAND_COLORS = {
-  highCard: '#94a3b8',      // ハイカード
-  onePair: '#60a5fa',       // ワンペア
-  twoPair: '#2563eb',       // ツーペア
-  threeCard: '#a855f7',     // スリーカード
-  straight: '#10b981',      // ストレート
-  flush: '#f59e0b',         // フラッシュ
-  fullHousePlus: '#ef4444', // フルハウス以上
+  highCard: '#94a3b8',
+  onePair: '#60a5fa',
+  twoPair: '#2563eb',
+  threeCard: '#a855f7',
+  straight: '#10b981',
+  flush: '#f59e0b',
+  fullHousePlus: '#ef4444',
 };
 
-// 役の日本語表示
 const HAND_LABELS = {
   highCard: 'ハイカード',
   onePair: 'ワンペア',
@@ -37,7 +38,6 @@ const HAND_LABELS = {
 // 【勝率用ツールチップ】
 const CustomEquityTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
-    const data = payload[0].payload;
     return (
       <div style={{
         backgroundColor: "rgba(15, 23, 42, 0.95)",
@@ -53,36 +53,18 @@ const CustomEquityTooltip = ({ active, payload, label }) => {
         <p style={{ margin: "0 0 6px 0", fontWeight: "bold", borderBottom: "1px solid #475569", paddingBottom: "4px", color: "#e2e8f0" }}>
           {label}
         </p>
-
         {payload.map((item, index) => (
           <p key={index} style={{ margin: "2px 0", color: item.color, fontWeight: "bold" }}>
             {item.name}: {item.value !== undefined ? Number(item.value).toFixed(1) : 0}%
           </p>
         ))}
-
-        {data.outs && (
-          <div style={{ marginTop: "6px", paddingTop: "6px", borderTop: "1px dashed #475569", fontSize: "10.5px" }}>
-            <p style={{ margin: "3px 0", color: "#94a3b8" }}>
-              <span style={{ color: "#3b82f6", fontWeight: "bold" }}>P1 アウツ ({data.outs.p1 ? data.outs.p1.length : 0}枚):</span><br />
-              <span style={{ color: "#cbd5e1", display: "block", marginTop: "2px", lineHeight: "1.3", wordWrap: "break-word", whiteSpace: "normal" }}>
-                {data.outs.p1 && data.outs.p1.length > 0 ? data.outs.p1.join(", ") : "なし"}
-              </span>
-            </p>
-            <p style={{ margin: "3px 0", color: "#94a3b8", marginTop: "6px" }}>
-              <span style={{ color: "#ef4444", fontWeight: "bold" }}>P2 アウツ ({data.outs.p2 ? data.outs.p2.length : 0}枚):</span><br />
-              <span style={{ color: "#cbd5e1", display: "block", marginTop: "2px", lineHeight: "1.3", wordWrap: "break-word", whiteSpace: "normal" }}>
-                {data.outs.p2 && data.outs.p2.length > 0 ? data.outs.p2.join(", ") : "なし"}
-              </span>
-            </p>
-          </div>
-        )}
       </div>
     );
   }
   return null;
 };
 
-// 【成立役用ツールチップ（P1 / P2 比較表示）】
+// 【成立役用ツールチップ】
 const CustomBarTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     const p1Items = payload.filter((item) => item.dataKey.startsWith('p1_') && item.value > 0);
@@ -104,7 +86,6 @@ const CustomBarTooltip = ({ active, payload, label }) => {
           {label} 成立役比較
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-          {/* Player 1 カラム */}
           <div>
             <div style={{ color: '#60a5fa', fontWeight: 'bold', marginBottom: '4px', borderBottom: '1px solid #3b82f6', fontSize: '11.5px' }}>
               Player 1 (左)
@@ -121,7 +102,6 @@ const CustomBarTooltip = ({ active, payload, label }) => {
             }) : <span style={{ color: '#94a3b8', fontSize: '10px' }}>データなし</span>}
           </div>
 
-          {/* Player 2 カラム */}
           <div>
             <div style={{ color: '#f87171', fontWeight: 'bold', marginBottom: '4px', borderBottom: '1px solid #ef4444', fontSize: '11.5px' }}>
               Player 2 (右)
@@ -144,10 +124,60 @@ const CustomBarTooltip = ({ active, payload, label }) => {
   return null;
 };
 
-export default function EquityChart({ historyData, style }) {
-  const [activeTab, setActiveTab] = useState('equity'); // 'equity' | 'hands'
+export default function EquityChart({ historyData, boardCards = [], style }) {
+  const [activeTab, setActiveTab] = useState('equity'); // 'equity' | 'hands' | 'heatmap'
+  const [selectedHand, setSelectedHand] = useState(null);
+  const [street, setStreet] = useState('river'); // ストリート切替状態
   const containerRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(0);
+
+  // ★ 1. 有効なカード（nullや空文字を除外）のみをフィルター取得
+  const validBoardCards = useMemo(() => {
+    return (boardCards || []).filter((card) => card && card !== '');
+  }, [boardCards]);
+
+  // ★ 2. 選択ストリートに応じた有効カード切り出し
+  const currentBoard = useMemo(() => {
+    switch (street) {
+      case 'preflop': return [];
+      case 'flop': return validBoardCards.slice(0, 3);
+      case 'turn': return validBoardCards.slice(0, 4);
+      case 'river': return validBoardCards.slice(0, 5);
+      default: return validBoardCards;
+    }
+  }, [street, validBoardCards]);
+
+  // 13×13 マトリックス用スコアデータの算出・キャッシュ
+  const heatmapGrid = useMemo(() => {
+    const rawGrid = [];
+    let maxScore = -Infinity;
+    let minScore = Infinity;
+
+    for (let r = 0; r < 13; r++) {
+      const row = [];
+      for (let c = 0; c < 13; c++) {
+        let hand = '';
+        if (r === c) hand = RANKS[r] + RANKS[c];
+        else if (r < c) hand = RANKS[r] + RANKS[c] + 's';
+        else hand = RANKS[c] + RANKS[r] + 'o';
+
+        const score = calculateHandScore(hand, currentBoard);
+        if (score > maxScore) maxScore = score;
+        if (score < minScore) minScore = score;
+
+        row.push({ hand, score, row: r, col: c });
+      }
+      rawGrid.push(row);
+    }
+
+    return rawGrid.map((row) =>
+      row.map((item) => ({
+        ...item,
+        color: getScoreColor(item.score, maxScore, minScore),
+        textColor: getTextColor(item.score, maxScore, minScore),
+      }))
+    );
+  }, [currentBoard]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -160,7 +190,6 @@ export default function EquityChart({ historyData, style }) {
     return () => observer.disconnect();
   }, []);
 
-  // River到達時 (全4カテゴリ分割) と同じ割合のバー太さをプロット領域幅から動的計算
   const plotWidth = Math.max(0, containerWidth - 30);
   const calculatedBarSize = containerWidth > 0
     ? Math.max(10, Math.round(((plotWidth / 4) * 0.6) / 2))
@@ -169,52 +198,40 @@ export default function EquityChart({ historyData, style }) {
   return (
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', ...style }}>
       
-      {/* メインタブ切り替えボタン */}
+      {/* 1. メインタブ切り替えボタン */}
       <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', background: 'rgba(15, 23, 42, 0.6)', padding: '3px', borderRadius: '8px' }}>
         <button
           onClick={() => setActiveTab('equity')}
           style={{
-            flex: 1,
-            padding: '6px 10px',
-            borderRadius: '6px',
-            border: 'none',
-            fontWeight: 'bold',
-            fontSize: '12px',
-            cursor: 'pointer',
-            backgroundColor: activeTab === 'equity' ? '#2563eb' : 'transparent',
-            color: activeTab === 'equity' ? '#fff' : '#94a3b8',
-            transition: 'all 0.2s ease'
+            flex: 1, padding: '6px', borderRadius: '6px', border: 'none', fontWeight: 'bold', fontSize: '11.5px', cursor: 'pointer',
+            backgroundColor: activeTab === 'equity' ? '#2563eb' : 'transparent', color: activeTab === 'equity' ? '#fff' : '#94a3b8', transition: 'all 0.2s ease'
           }}
         >
-        勝率推移
+          勝率推移
         </button>
         <button
           onClick={() => setActiveTab('hands')}
           style={{
-            flex: 1,
-            padding: '6px 10px',
-            borderRadius: '6px',
-            border: 'none',
-            fontWeight: 'bold',
-            fontSize: '12px',
-            cursor: 'pointer',
-            backgroundColor: activeTab === 'hands' ? '#2563eb' : 'transparent',
-            color: activeTab === 'hands' ? '#fff' : '#94a3b8',
-            transition: 'all 0.2s ease'
+            flex: 1, padding: '6px', borderRadius: '6px', border: 'none', fontWeight: 'bold', fontSize: '11.5px', cursor: 'pointer',
+            backgroundColor: activeTab === 'hands' ? '#2563eb' : 'transparent', color: activeTab === 'hands' ? '#fff' : '#94a3b8', transition: 'all 0.2s ease'
           }}
         >
-        成立役の推移
+          成立役の推移
+        </button>
+        <button
+          onClick={() => setActiveTab('heatmap')}
+          style={{
+            flex: 1, padding: '6px', borderRadius: '6px', border: 'none', fontWeight: 'bold', fontSize: '11.5px', cursor: 'pointer',
+            backgroundColor: activeTab === 'heatmap' ? '#2563eb' : 'transparent', color: activeTab === 'heatmap' ? '#fff' : '#94a3b8', transition: 'all 0.2s ease'
+          }}
+        >
+          レンジヒートマップ
         </button>
       </div>
 
-      {/* 成立役タブ選択時の P1 / P2 識別ガイド（表示切り替え時もレイアウト高さを一定に保つため領域を保持） */}
+      {/* サブガイド領域 */}
       <div style={{
-        display: 'flex',
-        justify: 'center',
-        alignItems: 'center',
-        gap: '16px',
-        marginBottom: '6px',
-        fontSize: '11px',
+        display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', marginBottom: '6px', fontSize: '11px', height: '18px',
         visibility: activeTab === 'hands' ? 'visible' : 'hidden'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#93c5fd', fontWeight: 'bold' }}>
@@ -227,33 +244,31 @@ export default function EquityChart({ historyData, style }) {
         </div>
       </div>
 
-      {/* グラフエリア */}
-      <div ref={containerRef} style={{ width: '100%', height: 'clamp(220px, 34vh, 420px)', position: 'relative' }}>
-        <ResponsiveContainer width="100%" height="100%">
-          {activeTab === 'equity' ? (
-            /* --- 1. 勝率推移グラフ (折れ線) --- */
+      {/* 2. メイン表示エリア */}
+      <div ref={containerRef} style={{ width: '100%', minHeight: '340px', position: 'relative' }}>
+        
+        {activeTab === 'equity' && (
+          <ResponsiveContainer width="100%" height={340}>
             <LineChart data={historyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
               <XAxis dataKey="label" stroke="#94a3b8" tick={{ fill: "#94a3b8", fontSize: 12 }} />
               <YAxis stroke="#94a3b8" tick={{ fill: "#94a3b8", fontSize: 12 }} domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} unit="%" />
-              
-              <Tooltip content={<CustomEquityTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.2)', strokeDasharray: '3 3' }} />
+              <Tooltip trigger="hover" content={<CustomEquityTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.2)', strokeDasharray: '3 3' }} />
               <Legend wrapperStyle={{ fontSize: "12px", color: "#cbd5e1" }} />
-              
               <Line type="linear" dataKey="p1" name="Player 1" stroke="#3b82f6" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} animationDuration={350} />
               <Line type="linear" dataKey="p2" name="Player 2" stroke="#ef4444" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} animationDuration={350} />
               <Line type="linear" dataKey="tie" name="Chop" stroke="#dedddd" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} animationDuration={350} />
             </LineChart>
-          ) : (
-            /* --- 2. 成立役の推移グラフ (Player 1 & 2 横並び積み上げバー) --- */
+          </ResponsiveContainer>
+        )}
+
+        {activeTab === 'hands' && (
+          <ResponsiveContainer width="100%" height={340}>
             <BarChart data={historyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} barGap={2} barSize={calculatedBarSize}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
               <XAxis dataKey="label" stroke="#94a3b8" tick={{ fill: "#94a3b8", fontSize: 12 }} />
               <YAxis stroke="#94a3b8" tick={{ fill: "#94a3b8", fontSize: 12 }} domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} unit="%" />
-              
-              <Tooltip content={<CustomBarTooltip />} cursor={{ fill: 'rgba(255, 255, 255, 0.1)' }} />
-
-              {/*  Player 1 用の積層バー (stackId="p1") */}
+              <Tooltip trigger="hover" content={<CustomBarTooltip />} cursor={{ fill: 'rgba(255, 255, 255, 0.1)' }} />
               <Bar dataKey="p1_highCard" stackId="p1" fill={HAND_COLORS.highCard} isAnimationActive={false} />
               <Bar dataKey="p1_onePair" stackId="p1" fill={HAND_COLORS.onePair} isAnimationActive={false} />
               <Bar dataKey="p1_twoPair" stackId="p1" fill={HAND_COLORS.twoPair} isAnimationActive={false} />
@@ -261,8 +276,6 @@ export default function EquityChart({ historyData, style }) {
               <Bar dataKey="p1_straight" stackId="p1" fill={HAND_COLORS.straight} isAnimationActive={false} />
               <Bar dataKey="p1_flush" stackId="p1" fill={HAND_COLORS.flush} isAnimationActive={false} />
               <Bar dataKey="p1_fullHousePlus" stackId="p1" fill={HAND_COLORS.fullHousePlus} isAnimationActive={false} />
-
-              {/*  Player 2 用の積層バー (stackId="p2") */}
               <Bar dataKey="p2_highCard" stackId="p2" fill={HAND_COLORS.highCard} isAnimationActive={false} />
               <Bar dataKey="p2_onePair" stackId="p2" fill={HAND_COLORS.onePair} isAnimationActive={false} />
               <Bar dataKey="p2_twoPair" stackId="p2" fill={HAND_COLORS.twoPair} isAnimationActive={false} />
@@ -271,18 +284,135 @@ export default function EquityChart({ historyData, style }) {
               <Bar dataKey="p2_flush" stackId="p2" fill={HAND_COLORS.flush} isAnimationActive={false} />
               <Bar dataKey="p2_fullHousePlus" stackId="p2" fill={HAND_COLORS.fullHousePlus} isAnimationActive={false} />
             </BarChart>
-          )}
-        </ResponsiveContainer>
+          </ResponsiveContainer>
+        )}
+
+        {activeTab === 'heatmap' && (
+          <div style={{
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'flex-start',
+            boxSizing: 'border-box'
+          }}>
+            
+            {/* ★ 3. ストリート切り替えボタン群 (レイアウト崩れ対策で独立配置) */}
+            <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', width: '100%', maxWidth: '380px' }}>
+              {[
+                { key: 'preflop', label: 'Preflop', minCards: 0 },
+                { key: 'flop', label: 'Flop', minCards: 3 },
+                { key: 'turn', label: 'Turn', minCards: 4 },
+                { key: 'river', label: 'River', minCards: 5 },
+              ].map((item) => {
+                const isActive = street === item.key;
+                // 有効枚数で判定
+                const isAvailable = validBoardCards.length >= item.minCards || item.key === 'preflop';
+
+                return (
+                  <button
+                    key={item.key}
+                    onClick={() => isAvailable && setStreet(item.key)}
+                    disabled={!isAvailable}
+                    style={{
+                      flex: 1,
+                      padding: '5px 0',
+                      fontSize: '11px',
+                      fontWeight: 'bold',
+                      borderRadius: '4px',
+                      border: isActive ? '1px solid #60a5fa' : '1px solid #334155',
+                      cursor: isAvailable ? 'pointer' : 'not-allowed',
+                      backgroundColor: isActive ? '#2563eb' : isAvailable ? '#1e293b' : '#0f172a',
+                      color: isActive ? '#ffffff' : isAvailable ? '#cbd5e1' : '#475569',
+                      opacity: isAvailable ? 1 : 0.4,
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    {item.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* 13x13 グリッド */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(13, 1fr)',
+              gap: '2px',
+              width: '100%',
+              maxWidth: '380px',
+              aspectRatio: '1 / 1',
+              backgroundColor: '#0f172a',
+              padding: '6px',
+              borderRadius: '8px',
+              border: '1px solid #334155',
+              boxSizing: 'border-box'
+            }}>
+              {heatmapGrid.map((row, r) =>
+                row.map((item, c) => {
+                  const isSelected = selectedHand?.hand === item.hand;
+                  return (
+                    <button
+                      key={`${r}-${c}`}
+                      onClick={() => setSelectedHand(item)}
+                      style={{
+                        backgroundColor: item.color,
+                        color: item.textColor,
+                        border: isSelected ? '2px solid #ffffff' : 'none',
+                        borderRadius: '3px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 'bold',
+                        fontSize: '10px',
+                        cursor: 'pointer',
+                        padding: 0,
+                        boxShadow: isSelected ? '0 0 8px rgba(255,255,255,0.8)' : 'none',
+                        transform: isSelected ? 'scale(1.08)' : 'scale(1)',
+                        zIndex: isSelected ? 2 : 1,
+                        transition: 'all 0.15s ease'
+                      }}
+                      title={`${item.hand}: スコア ${item.score}`}
+                    >
+                      {item.hand}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+
+            {/* クリックされたハンドの詳細表示パネル */}
+            <div style={{
+              marginTop: '8px',
+              height: '32px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: 'rgba(30, 41, 59, 0.8)',
+              padding: '0 16px',
+              borderRadius: '6px',
+              border: '1px solid #334155',
+              fontSize: '12px',
+              color: '#f8fafc'
+            }}>
+              {selectedHand ? (
+                <span>
+                  選択ハンド: <strong style={{ color: '#ffc107', fontSize: '13px' }}>{selectedHand.hand}</strong>
+                  {' | '}
+                  評価スコア: <strong style={{ color: selectedHand.color, fontSize: '13px' }}>{selectedHand.score}点</strong>
+                </span>
+              ) : (
+                <span style={{ color: '#94a3b8' }}>※ マス目をクリックするとハンドの詳細スコアが表示されます</span>
+              )}
+            </div>
+          </div>
+        )}
+
       </div>
 
-      {/* 成立役タブ選択時の凡例表示（表示切り替え時もレイアウト高さを一定に保つため領域を保持） */}
+      {/* 凡例表示 */}
       <div style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        justify: 'center',
-        gap: '8px',
-        marginTop: '8px',
-        paddingTop: '6px',
+        display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '8px', marginTop: '8px', paddingTop: '6px',
         borderTop: activeTab === 'hands' ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
         visibility: activeTab === 'hands' ? 'visible' : 'hidden'
       }}>
