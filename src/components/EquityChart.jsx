@@ -122,8 +122,10 @@ const CustomBarTooltip = ({ active, payload, label }) => {
   return null;
 };
 
-export default function EquityChart({ historyData, boardCards = [], style }) {
-  const [activeTab, setActiveTab] = useState('equity'); // 'equity' | 'hands' | 'heatmap'
+export default function EquityChart({ historyData, boardCards = [], style, isPc = false, activeTab: controlledActiveTab, setActiveTab: setControlledActiveTab, windowSize }) {
+  const [localActiveTab, setLocalActiveTab] = useState('equity'); // 'equity' | 'hands' | 'heatmap'
+  const activeTab = controlledActiveTab !== undefined ? controlledActiveTab : localActiveTab;
+  const setActiveTab = setControlledActiveTab || setLocalActiveTab;
   const containerRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(0);
 
@@ -148,15 +150,22 @@ export default function EquityChart({ historyData, boardCards = [], style }) {
     ? Math.max(10, Math.round(((plotWidth / 4) * 0.6) / 2))
     : undefined;
 
+  // ウィンドウ縦幅（windowSize.height）の割合から動的に固定縦幅を算出
+  const vhHeight = windowSize?.height ? windowSize.height : (typeof window !== 'undefined' ? window.innerHeight : 768);
+  const contentHeight = activeTab === 'heatmap'
+    ? (isPc ? Math.max(350, Math.round(vhHeight * 0.53)) : 390)
+    : (isPc ? Math.max(250, Math.round(vhHeight * 0.38)) : 340);
+  const handsChartHeight = contentHeight - 26;
+
   return (
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', ...style }}>
       
       {/* 1. メインタブ切り替えボタン */}
-      <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', background: 'rgba(15, 23, 42, 0.6)', padding: '3px', borderRadius: '8px' }}>
+      <div style={{ display: 'flex', gap: '6px', marginBottom: '6px', background: 'rgba(15, 23, 42, 0.6)', padding: '3px', borderRadius: '8px' }}>
         <button
           onClick={() => setActiveTab('equity')}
           style={{
-            flex: 1, padding: '6px', borderRadius: '6px', border: 'none', fontWeight: 'bold', fontSize: '11.5px', cursor: 'pointer',
+            flex: 1, padding: '5px', borderRadius: '6px', border: 'none', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer',
             backgroundColor: activeTab === 'equity' ? '#2563eb' : 'transparent', color: activeTab === 'equity' ? '#fff' : '#94a3b8', transition: 'all 0.2s ease'
           }}
         >
@@ -165,7 +174,7 @@ export default function EquityChart({ historyData, boardCards = [], style }) {
         <button
           onClick={() => setActiveTab('hands')}
           style={{
-            flex: 1, padding: '6px', borderRadius: '6px', border: 'none', fontWeight: 'bold', fontSize: '11.5px', cursor: 'pointer',
+            flex: 1, padding: '5px', borderRadius: '6px', border: 'none', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer',
             backgroundColor: activeTab === 'hands' ? '#2563eb' : 'transparent', color: activeTab === 'hands' ? '#fff' : '#94a3b8', transition: 'all 0.2s ease'
           }}
         >
@@ -174,7 +183,7 @@ export default function EquityChart({ historyData, boardCards = [], style }) {
         <button
           onClick={() => setActiveTab('heatmap')}
           style={{
-            flex: 1, padding: '6px', borderRadius: '6px', border: 'none', fontWeight: 'bold', fontSize: '11.5px', cursor: 'pointer',
+            flex: 1, padding: '5px', borderRadius: '6px', border: 'none', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer',
             backgroundColor: activeTab === 'heatmap' ? '#2563eb' : 'transparent', color: activeTab === 'heatmap' ? '#fff' : '#94a3b8', transition: 'all 0.2s ease'
           }}
         >
@@ -184,7 +193,7 @@ export default function EquityChart({ historyData, boardCards = [], style }) {
 
       {/* サブガイド領域 */}
       <div style={{
-        display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', marginBottom: '6px', fontSize: '11px', height: '18px',
+        display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', marginBottom: '4px', fontSize: '10.5px', height: '16px',
         visibility: activeTab === 'hands' ? 'visible' : 'hidden'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#93c5fd', fontWeight: 'bold' }}>
@@ -197,18 +206,18 @@ export default function EquityChart({ historyData, boardCards = [], style }) {
         </div>
       </div>
 
-      {/* 2. メイン表示エリア */}
-      <div ref={containerRef} style={{ width: '100%', minHeight: '340px', position: 'relative' }}>
+      {/* 2. メイン表示エリア (全タブで全高 contentHeight px に固定) */}
+      <div ref={containerRef} style={{ width: '100%', height: `${contentHeight}px`, minHeight: `${contentHeight}px`, position: 'relative', boxSizing: 'border-box' }}>
         
         {activeTab === 'equity' && (
           historyData && historyData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={340}>
+            <ResponsiveContainer width="100%" height={contentHeight}>
               <LineChart data={historyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                <XAxis dataKey="label" stroke="#94a3b8" tick={{ fill: "#94a3b8", fontSize: 12 }} />
-                <YAxis stroke="#94a3b8" tick={{ fill: "#94a3b8", fontSize: 12 }} domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} unit="%" />
+                <XAxis dataKey="label" stroke="#94a3b8" tick={{ fill: "#94a3b8", fontSize: 11 }} />
+                <YAxis stroke="#94a3b8" tick={{ fill: "#94a3b8", fontSize: 11 }} domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} unit="%" />
                 <Tooltip trigger="hover" content={<CustomEquityTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.2)', strokeDasharray: '3 3' }} />
-                <Legend wrapperStyle={{ fontSize: "12px", color: "#cbd5e1" }} />
+                <Legend wrapperStyle={{ fontSize: "11px", color: "#cbd5e1" }} />
                 <Line type="linear" dataKey="p1" name="Player 1" stroke="#3b82f6" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} animationDuration={350} />
                 <Line type="linear" dataKey="p2" name="Player 2" stroke="#ef4444" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} animationDuration={350} />
                 <Line type="linear" dataKey="tie" name="Chop" stroke="#dedddd" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} animationDuration={350} />
@@ -216,12 +225,12 @@ export default function EquityChart({ historyData, boardCards = [], style }) {
             </ResponsiveContainer>
           ) : (
             <div style={{
-              height: "340px", border: "2px dashed rgba(255,255,255,0.25)", borderRadius: "12px",
-              display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "20px 16px",
+              height: `${contentHeight}px`, border: "2px dashed rgba(255,255,255,0.25)", borderRadius: "12px",
+              display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "16px 12px",
               textAlign: "center", color: "rgba(255,255,255,0.6)", backgroundColor: "rgba(0,0,0,0.18)", boxSizing: "border-box"
             }}>
-              <span style={{ fontSize: "clamp(12px, 1.3vw, 16px)", fontWeight: "bold", color: "#ffc107", letterSpacing: "0.5px" }}>EQUITY & HAND ANALYZER</span>
-              <span style={{ fontSize: "clamp(10px, 1vw, 13px)", marginTop: "8px", maxWidth: "280px", lineHeight: "1.5", color: "#cbd5e1" }}>
+              <span style={{ fontSize: "clamp(12px, 1.3vw, 15px)", fontWeight: "bold", color: "#ffc107", letterSpacing: "0.5px" }}>EQUITY & HAND ANALYZER</span>
+              <span style={{ fontSize: "clamp(10px, 1vw, 12px)", marginTop: "6px", maxWidth: "280px", lineHeight: "1.4", color: "#cbd5e1" }}>
                 カードをセットして「勝率を計算する」をクリックすると、ここにストリートごとの推移チャートが表示されます。
               </span>
             </div>
@@ -230,11 +239,11 @@ export default function EquityChart({ historyData, boardCards = [], style }) {
 
         {activeTab === 'hands' && (
           historyData && historyData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={340}>
+            <ResponsiveContainer width="100%" height={handsChartHeight}>
               <BarChart data={historyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} barGap={2} barSize={calculatedBarSize}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                <XAxis dataKey="label" stroke="#94a3b8" tick={{ fill: "#94a3b8", fontSize: 12 }} />
-                <YAxis stroke="#94a3b8" tick={{ fill: "#94a3b8", fontSize: 12 }} domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} unit="%" />
+                <XAxis dataKey="label" stroke="#94a3b8" tick={{ fill: "#94a3b8", fontSize: 11 }} />
+                <YAxis stroke="#94a3b8" tick={{ fill: "#94a3b8", fontSize: 11 }} domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} unit="%" />
                 <Tooltip trigger="hover" content={<CustomBarTooltip />} cursor={{ fill: 'rgba(255, 255, 255, 0.1)' }} />
                 <Bar dataKey="p1_highCard" stackId="p1" fill={HAND_COLORS.highCard} isAnimationActive={false} />
                 <Bar dataKey="p1_onePair" stackId="p1" fill={HAND_COLORS.onePair} isAnimationActive={false} />
@@ -254,38 +263,39 @@ export default function EquityChart({ historyData, boardCards = [], style }) {
             </ResponsiveContainer>
           ) : (
             <div style={{
-              height: "340px", border: "2px dashed rgba(255,255,255,0.25)", borderRadius: "12px",
-              display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "20px 16px",
+              height: `${handsChartHeight}px`, border: "2px dashed rgba(255,255,255,0.25)", borderRadius: "12px",
+              display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "16px 12px",
               textAlign: "center", color: "rgba(255,255,255,0.6)", backgroundColor: "rgba(0,0,0,0.18)", boxSizing: "border-box"
             }}>
-              <span style={{ fontSize: "clamp(12px, 1.3vw, 16px)", fontWeight: "bold", color: "#ffc107", letterSpacing: "0.5px" }}>EQUITY & HAND ANALYZER</span>
-              <span style={{ fontSize: "clamp(10px, 1vw, 13px)", marginTop: "8px", maxWidth: "280px", lineHeight: "1.5", color: "#cbd5e1" }}>
+              <span style={{ fontSize: "clamp(12px, 1.3vw, 15px)", fontWeight: "bold", color: "#ffc107", letterSpacing: "0.5px" }}>EQUITY & HAND ANALYZER</span>
+              <span style={{ fontSize: "clamp(10px, 1vw, 12px)", marginTop: "6px", maxWidth: "280px", lineHeight: "1.4", color: "#cbd5e1" }}>
                 カードをセットして「勝率を計算する」をクリックすると、ここに成立役の推移が表示されます。
               </span>
             </div>
           )
         )}
 
-        {/* ヒートマップ専用コンポーネントを呼び出す */}
+        {/* ヒートマップ専用コンポーネントを呼び出す (固定高度 contentHeight を渡す) */}
         {activeTab === 'heatmap' && (
-          <HeatmapSection board={validBoardCards} />
+          <HeatmapSection board={validBoardCards} isPc={isPc} height={contentHeight} />
         )}
 
       </div>
 
-      {/* 凡例表示 */}
-      <div style={{
-        display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '8px', marginTop: '8px', paddingTop: '6px',
-        borderTop: activeTab === 'hands' ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
-        visibility: activeTab === 'hands' ? 'visible' : 'hidden'
-      }}>
-        {Object.entries(HAND_LABELS).map(([key, label]) => (
-          <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10.5px', color: '#cbd5e1' }}>
-            <span style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: HAND_COLORS[key] }} />
-            <span>{label}</span>
-          </div>
-        ))}
-      </div>
+      {/* 凡例表示 (handsタブ時のみ表示) */}
+      {activeTab === 'hands' && (
+        <div style={{
+          display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '8px', marginTop: '4px', paddingTop: '2px',
+          height: '20px', boxSizing: 'border-box'
+        }}>
+          {Object.entries(HAND_LABELS).map(([key, label]) => (
+            <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10.5px', color: '#cbd5e1' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: HAND_COLORS[key] }} />
+              <span>{label}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
     </div>
   );

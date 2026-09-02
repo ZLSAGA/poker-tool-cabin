@@ -531,6 +531,8 @@ export default function App() {
     if (val === "strong") return "強"; if (val === "medium") return "標準"; if (val === "weak") return "弱"; if (val === "any") return "Any"; if (val === "myRange") return "マイ"; return "";
   };
 
+  const [activeTab, setActiveTab] = useState('equity');
+
   return (
     <div style={{ position: "relative", top: 0, left: 0, width: "100%", minHeight: "100vh", margin: 0, padding: 0, fontFamily: "sans-serif", backgroundColor: "#f4f6f9", boxSizing: "border-box" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5vh", padding: `${Math.max(4, Math.round(windowSize.height * 0.006))}px ${Math.max(8, Math.round(windowSize.width * 0.012))}px` }}>
@@ -609,10 +611,16 @@ export default function App() {
             <EquityChart 
               historyData={equityHistory} 
               boardCards={board} 
+              isPc={isPc}
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              windowSize={windowSize}
               style={{ display: "flex", flexDirection: "column", justifyContent: "center" }} 
             />
 
-            <PotOddsCalculator isLoading={isLoading} potSize={potSize} setPotSize={setPotSize} callAmount={callAmount} setCallAmount={setCallAmount} result={result} equityHistory={equityHistory} windowSize={windowSize} />
+            {activeTab !== 'heatmap' && (
+              <PotOddsCalculator isLoading={isLoading} potSize={potSize} setPotSize={setPotSize} callAmount={callAmount} setCallAmount={setCallAmount} result={result} equityHistory={equityHistory} windowSize={windowSize} isPc={isPc} />
+            )}
           </div>
         </div>
 
