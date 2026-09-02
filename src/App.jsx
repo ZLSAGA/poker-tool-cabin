@@ -606,24 +606,11 @@ export default function App() {
 
           {/* 右カラム */}
           <div style={{ flex: isPc ? "1 1 50%" : "none", display: "flex", flexDirection: "column", justifyContent: "flex-start" }}>
-            {equityHistory ? (
-              <EquityChart 
-                historyData={equityHistory} 
-                boardCards={board} 
-                style={{ display: "flex", flexDirection: "column", justifyContent: "center" }} 
-              />
-            ) : (
-              <div style={{
-                height: "100%", minHeight: "clamp(180px, 28vh, 320px)", border: "2px dashed rgba(255,255,255,0.25)", borderRadius: "12px",
-                display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "20px 16px",
-                textAlign: "center", color: "rgba(255,255,255,0.6)", backgroundColor: "rgba(0,0,0,0.18)", boxSizing: "border-box"
-              }}>
-                <span style={{ fontSize: "clamp(12px, 1.3vw, 16px)", fontWeight: "bold", color: "#ffc107", letterSpacing: "0.5px" }}>EQUITY & HAND ANALYZER</span>
-                <span style={{ fontSize: "clamp(10px, 1vw, 13px)", marginTop: "8px", maxWidth: "280px", lineHeight: "1.5", color: "#cbd5e1" }}>
-                  カードをセットして「勝率を計算する」をクリックすると、ここにストリートごとの推移チャートが表示されます。
-                </span>
-              </div>
-            )}
+            <EquityChart 
+              historyData={equityHistory} 
+              boardCards={board} 
+              style={{ display: "flex", flexDirection: "column", justifyContent: "center" }} 
+            />
 
             <PotOddsCalculator isLoading={isLoading} potSize={potSize} setPotSize={setPotSize} callAmount={callAmount} setCallAmount={setCallAmount} result={result} equityHistory={equityHistory} windowSize={windowSize} />
           </div>

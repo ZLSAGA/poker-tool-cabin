@@ -11,9 +11,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-import { calculateHandScore, getScoreColor, getTextColor } from './pokerEvaluator';
-
-const RANKS = ['A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2'];
+import HeatmapSection from './HeatmapSection';
 
 const HAND_COLORS = {
   highCard: '#94a3b8',
@@ -126,58 +124,13 @@ const CustomBarTooltip = ({ active, payload, label }) => {
 
 export default function EquityChart({ historyData, boardCards = [], style }) {
   const [activeTab, setActiveTab] = useState('equity'); // 'equity' | 'hands' | 'heatmap'
-  const [selectedHand, setSelectedHand] = useState(null);
-  const [street, setStreet] = useState('river'); // ストリート切替状態
   const containerRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(0);
 
-  // ★ 1. 有効なカード（nullや空文字を除外）のみをフィルター取得
+  // 有効なボードカードのみ抽出
   const validBoardCards = useMemo(() => {
     return (boardCards || []).filter((card) => card && card !== '');
   }, [boardCards]);
-
-  // ★ 2. 選択ストリートに応じた有効カード切り出し
-  const currentBoard = useMemo(() => {
-    switch (street) {
-      case 'preflop': return [];
-      case 'flop': return validBoardCards.slice(0, 3);
-      case 'turn': return validBoardCards.slice(0, 4);
-      case 'river': return validBoardCards.slice(0, 5);
-      default: return validBoardCards;
-    }
-  }, [street, validBoardCards]);
-
-  // 13×13 マトリックス用スコアデータの算出・キャッシュ
-  const heatmapGrid = useMemo(() => {
-    const rawGrid = [];
-    let maxScore = -Infinity;
-    let minScore = Infinity;
-
-    for (let r = 0; r < 13; r++) {
-      const row = [];
-      for (let c = 0; c < 13; c++) {
-        let hand = '';
-        if (r === c) hand = RANKS[r] + RANKS[c];
-        else if (r < c) hand = RANKS[r] + RANKS[c] + 's';
-        else hand = RANKS[c] + RANKS[r] + 'o';
-
-        const score = calculateHandScore(hand, currentBoard);
-        if (score > maxScore) maxScore = score;
-        if (score < minScore) minScore = score;
-
-        row.push({ hand, score, row: r, col: c });
-      }
-      rawGrid.push(row);
-    }
-
-    return rawGrid.map((row) =>
-      row.map((item) => ({
-        ...item,
-        color: getScoreColor(item.score, maxScore, minScore),
-        textColor: getTextColor(item.score, maxScore, minScore),
-      }))
-    );
-  }, [currentBoard]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -248,164 +201,74 @@ export default function EquityChart({ historyData, boardCards = [], style }) {
       <div ref={containerRef} style={{ width: '100%', minHeight: '340px', position: 'relative' }}>
         
         {activeTab === 'equity' && (
-          <ResponsiveContainer width="100%" height={340}>
-            <LineChart data={historyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-              <XAxis dataKey="label" stroke="#94a3b8" tick={{ fill: "#94a3b8", fontSize: 12 }} />
-              <YAxis stroke="#94a3b8" tick={{ fill: "#94a3b8", fontSize: 12 }} domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} unit="%" />
-              <Tooltip trigger="hover" content={<CustomEquityTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.2)', strokeDasharray: '3 3' }} />
-              <Legend wrapperStyle={{ fontSize: "12px", color: "#cbd5e1" }} />
-              <Line type="linear" dataKey="p1" name="Player 1" stroke="#3b82f6" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} animationDuration={350} />
-              <Line type="linear" dataKey="p2" name="Player 2" stroke="#ef4444" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} animationDuration={350} />
-              <Line type="linear" dataKey="tie" name="Chop" stroke="#dedddd" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} animationDuration={350} />
-            </LineChart>
-          </ResponsiveContainer>
+          historyData && historyData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={340}>
+              <LineChart data={historyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                <XAxis dataKey="label" stroke="#94a3b8" tick={{ fill: "#94a3b8", fontSize: 12 }} />
+                <YAxis stroke="#94a3b8" tick={{ fill: "#94a3b8", fontSize: 12 }} domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} unit="%" />
+                <Tooltip trigger="hover" content={<CustomEquityTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.2)', strokeDasharray: '3 3' }} />
+                <Legend wrapperStyle={{ fontSize: "12px", color: "#cbd5e1" }} />
+                <Line type="linear" dataKey="p1" name="Player 1" stroke="#3b82f6" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} animationDuration={350} />
+                <Line type="linear" dataKey="p2" name="Player 2" stroke="#ef4444" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} animationDuration={350} />
+                <Line type="linear" dataKey="tie" name="Chop" stroke="#dedddd" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} animationDuration={350} />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div style={{
+              height: "340px", border: "2px dashed rgba(255,255,255,0.25)", borderRadius: "12px",
+              display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "20px 16px",
+              textAlign: "center", color: "rgba(255,255,255,0.6)", backgroundColor: "rgba(0,0,0,0.18)", boxSizing: "border-box"
+            }}>
+              <span style={{ fontSize: "clamp(12px, 1.3vw, 16px)", fontWeight: "bold", color: "#ffc107", letterSpacing: "0.5px" }}>EQUITY & HAND ANALYZER</span>
+              <span style={{ fontSize: "clamp(10px, 1vw, 13px)", marginTop: "8px", maxWidth: "280px", lineHeight: "1.5", color: "#cbd5e1" }}>
+                カードをセットして「勝率を計算する」をクリックすると、ここにストリートごとの推移チャートが表示されます。
+              </span>
+            </div>
+          )
         )}
 
         {activeTab === 'hands' && (
-          <ResponsiveContainer width="100%" height={340}>
-            <BarChart data={historyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} barGap={2} barSize={calculatedBarSize}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-              <XAxis dataKey="label" stroke="#94a3b8" tick={{ fill: "#94a3b8", fontSize: 12 }} />
-              <YAxis stroke="#94a3b8" tick={{ fill: "#94a3b8", fontSize: 12 }} domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} unit="%" />
-              <Tooltip trigger="hover" content={<CustomBarTooltip />} cursor={{ fill: 'rgba(255, 255, 255, 0.1)' }} />
-              <Bar dataKey="p1_highCard" stackId="p1" fill={HAND_COLORS.highCard} isAnimationActive={false} />
-              <Bar dataKey="p1_onePair" stackId="p1" fill={HAND_COLORS.onePair} isAnimationActive={false} />
-              <Bar dataKey="p1_twoPair" stackId="p1" fill={HAND_COLORS.twoPair} isAnimationActive={false} />
-              <Bar dataKey="p1_threeCard" stackId="p1" fill={HAND_COLORS.threeCard} isAnimationActive={false} />
-              <Bar dataKey="p1_straight" stackId="p1" fill={HAND_COLORS.straight} isAnimationActive={false} />
-              <Bar dataKey="p1_flush" stackId="p1" fill={HAND_COLORS.flush} isAnimationActive={false} />
-              <Bar dataKey="p1_fullHousePlus" stackId="p1" fill={HAND_COLORS.fullHousePlus} isAnimationActive={false} />
-              <Bar dataKey="p2_highCard" stackId="p2" fill={HAND_COLORS.highCard} isAnimationActive={false} />
-              <Bar dataKey="p2_onePair" stackId="p2" fill={HAND_COLORS.onePair} isAnimationActive={false} />
-              <Bar dataKey="p2_twoPair" stackId="p2" fill={HAND_COLORS.twoPair} isAnimationActive={false} />
-              <Bar dataKey="p2_threeCard" stackId="p2" fill={HAND_COLORS.threeCard} isAnimationActive={false} />
-              <Bar dataKey="p2_straight" stackId="p2" fill={HAND_COLORS.straight} isAnimationActive={false} />
-              <Bar dataKey="p2_flush" stackId="p2" fill={HAND_COLORS.flush} isAnimationActive={false} />
-              <Bar dataKey="p2_fullHousePlus" stackId="p2" fill={HAND_COLORS.fullHousePlus} isAnimationActive={false} />
-            </BarChart>
-          </ResponsiveContainer>
+          historyData && historyData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={340}>
+              <BarChart data={historyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} barGap={2} barSize={calculatedBarSize}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                <XAxis dataKey="label" stroke="#94a3b8" tick={{ fill: "#94a3b8", fontSize: 12 }} />
+                <YAxis stroke="#94a3b8" tick={{ fill: "#94a3b8", fontSize: 12 }} domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} unit="%" />
+                <Tooltip trigger="hover" content={<CustomBarTooltip />} cursor={{ fill: 'rgba(255, 255, 255, 0.1)' }} />
+                <Bar dataKey="p1_highCard" stackId="p1" fill={HAND_COLORS.highCard} isAnimationActive={false} />
+                <Bar dataKey="p1_onePair" stackId="p1" fill={HAND_COLORS.onePair} isAnimationActive={false} />
+                <Bar dataKey="p1_twoPair" stackId="p1" fill={HAND_COLORS.twoPair} isAnimationActive={false} />
+                <Bar dataKey="p1_threeCard" stackId="p1" fill={HAND_COLORS.threeCard} isAnimationActive={false} />
+                <Bar dataKey="p1_straight" stackId="p1" fill={HAND_COLORS.straight} isAnimationActive={false} />
+                <Bar dataKey="p1_flush" stackId="p1" fill={HAND_COLORS.flush} isAnimationActive={false} />
+                <Bar dataKey="p1_fullHousePlus" stackId="p1" fill={HAND_COLORS.fullHousePlus} isAnimationActive={false} />
+                <Bar dataKey="p2_highCard" stackId="p2" fill={HAND_COLORS.highCard} isAnimationActive={false} />
+                <Bar dataKey="p2_onePair" stackId="p2" fill={HAND_COLORS.onePair} isAnimationActive={false} />
+                <Bar dataKey="p2_twoPair" stackId="p2" fill={HAND_COLORS.twoPair} isAnimationActive={false} />
+                <Bar dataKey="p2_threeCard" stackId="p2" fill={HAND_COLORS.threeCard} isAnimationActive={false} />
+                <Bar dataKey="p2_straight" stackId="p2" fill={HAND_COLORS.straight} isAnimationActive={false} />
+                <Bar dataKey="p2_flush" stackId="p2" fill={HAND_COLORS.flush} isAnimationActive={false} />
+                <Bar dataKey="p2_fullHousePlus" stackId="p2" fill={HAND_COLORS.fullHousePlus} isAnimationActive={false} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div style={{
+              height: "340px", border: "2px dashed rgba(255,255,255,0.25)", borderRadius: "12px",
+              display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "20px 16px",
+              textAlign: "center", color: "rgba(255,255,255,0.6)", backgroundColor: "rgba(0,0,0,0.18)", boxSizing: "border-box"
+            }}>
+              <span style={{ fontSize: "clamp(12px, 1.3vw, 16px)", fontWeight: "bold", color: "#ffc107", letterSpacing: "0.5px" }}>EQUITY & HAND ANALYZER</span>
+              <span style={{ fontSize: "clamp(10px, 1vw, 13px)", marginTop: "8px", maxWidth: "280px", lineHeight: "1.5", color: "#cbd5e1" }}>
+                カードをセットして「勝率を計算する」をクリックすると、ここに成立役の推移が表示されます。
+              </span>
+            </div>
+          )
         )}
 
+        {/* ヒートマップ専用コンポーネントを呼び出す */}
         {activeTab === 'heatmap' && (
-          <div style={{
-            width: '100%',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'flex-start',
-            boxSizing: 'border-box'
-          }}>
-            
-            {/* ★ 3. ストリート切り替えボタン群 (レイアウト崩れ対策で独立配置) */}
-            <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', width: '100%', maxWidth: '380px' }}>
-              {[
-                { key: 'preflop', label: 'Preflop', minCards: 0 },
-                { key: 'flop', label: 'Flop', minCards: 3 },
-                { key: 'turn', label: 'Turn', minCards: 4 },
-                { key: 'river', label: 'River', minCards: 5 },
-              ].map((item) => {
-                const isActive = street === item.key;
-                // 有効枚数で判定
-                const isAvailable = validBoardCards.length >= item.minCards || item.key === 'preflop';
-
-                return (
-                  <button
-                    key={item.key}
-                    onClick={() => isAvailable && setStreet(item.key)}
-                    disabled={!isAvailable}
-                    style={{
-                      flex: 1,
-                      padding: '5px 0',
-                      fontSize: '11px',
-                      fontWeight: 'bold',
-                      borderRadius: '4px',
-                      border: isActive ? '1px solid #60a5fa' : '1px solid #334155',
-                      cursor: isAvailable ? 'pointer' : 'not-allowed',
-                      backgroundColor: isActive ? '#2563eb' : isAvailable ? '#1e293b' : '#0f172a',
-                      color: isActive ? '#ffffff' : isAvailable ? '#cbd5e1' : '#475569',
-                      opacity: isAvailable ? 1 : 0.4,
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    {item.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* 13x13 グリッド */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(13, 1fr)',
-              gap: '2px',
-              width: '100%',
-              maxWidth: '380px',
-              aspectRatio: '1 / 1',
-              backgroundColor: '#0f172a',
-              padding: '6px',
-              borderRadius: '8px',
-              border: '1px solid #334155',
-              boxSizing: 'border-box'
-            }}>
-              {heatmapGrid.map((row, r) =>
-                row.map((item, c) => {
-                  const isSelected = selectedHand?.hand === item.hand;
-                  return (
-                    <button
-                      key={`${r}-${c}`}
-                      onClick={() => setSelectedHand(item)}
-                      style={{
-                        backgroundColor: item.color,
-                        color: item.textColor,
-                        border: isSelected ? '2px solid #ffffff' : 'none',
-                        borderRadius: '3px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontWeight: 'bold',
-                        fontSize: '10px',
-                        cursor: 'pointer',
-                        padding: 0,
-                        boxShadow: isSelected ? '0 0 8px rgba(255,255,255,0.8)' : 'none',
-                        transform: isSelected ? 'scale(1.08)' : 'scale(1)',
-                        zIndex: isSelected ? 2 : 1,
-                        transition: 'all 0.15s ease'
-                      }}
-                      title={`${item.hand}: スコア ${item.score}`}
-                    >
-                      {item.hand}
-                    </button>
-                  );
-                })
-              )}
-            </div>
-
-            {/* クリックされたハンドの詳細表示パネル */}
-            <div style={{
-              marginTop: '8px',
-              height: '32px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: 'rgba(30, 41, 59, 0.8)',
-              padding: '0 16px',
-              borderRadius: '6px',
-              border: '1px solid #334155',
-              fontSize: '12px',
-              color: '#f8fafc'
-            }}>
-              {selectedHand ? (
-                <span>
-                  選択ハンド: <strong style={{ color: '#ffc107', fontSize: '13px' }}>{selectedHand.hand}</strong>
-                  {' | '}
-                  評価スコア: <strong style={{ color: selectedHand.color, fontSize: '13px' }}>{selectedHand.score}点</strong>
-                </span>
-              ) : (
-                <span style={{ color: '#94a3b8' }}>※ マス目をクリックするとハンドの詳細スコアが表示されます</span>
-              )}
-            </div>
-          </div>
+          <HeatmapSection board={validBoardCards} />
         )}
 
       </div>
