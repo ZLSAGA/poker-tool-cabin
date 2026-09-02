@@ -152,10 +152,13 @@ export default function EquityChart({ historyData, boardCards = [], style, isPc 
 
   // ウィンドウ縦幅（windowSize.height）の割合から動的に固定縦幅を算出
   const vhHeight = windowSize?.height ? windowSize.height : (typeof window !== 'undefined' ? window.innerHeight : 768);
+  const winWidth = windowSize?.width ? windowSize.width : (typeof window !== 'undefined' ? window.innerWidth : 1024);
+  const isRowLayout = winWidth >= 1150;
+
   const contentHeight = activeTab === 'heatmap'
-    ? (isPc ? Math.max(350, Math.round(vhHeight * 0.53)) : 390)
+    ? (isRowLayout ? Math.max(350, Math.round(vhHeight * 0.53)) : 'auto')
     : (isPc ? Math.max(250, Math.round(vhHeight * 0.38)) : 340);
-  const handsChartHeight = contentHeight - 26;
+  const handsChartHeight = typeof contentHeight === 'number' ? contentHeight - 26 : 314;
 
   return (
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', ...style }}>
@@ -206,8 +209,14 @@ export default function EquityChart({ historyData, boardCards = [], style, isPc 
         </div>
       </div>
 
-      {/* 2. メイン表示エリア (全タブで全高 contentHeight px に固定) */}
-      <div ref={containerRef} style={{ width: '100%', height: `${contentHeight}px`, minHeight: `${contentHeight}px`, position: 'relative', boxSizing: 'border-box' }}>
+      {/* 2. メイン表示エリア */}
+      <div ref={containerRef} style={{
+        width: '100%',
+        height: typeof contentHeight === 'number' ? `${contentHeight}px` : contentHeight,
+        minHeight: isRowLayout && typeof contentHeight === 'number' ? `${contentHeight}px` : 'auto',
+        position: 'relative',
+        boxSizing: 'border-box'
+      }}>
         
         {activeTab === 'equity' && (
           historyData && historyData.length > 0 ? (
@@ -277,7 +286,7 @@ export default function EquityChart({ historyData, boardCards = [], style, isPc 
 
         {/* ヒートマップ専用コンポーネントを呼び出す (固定高度 contentHeight を渡す) */}
         {activeTab === 'heatmap' && (
-          <HeatmapSection board={validBoardCards} isPc={isPc} height={contentHeight} />
+          <HeatmapSection board={validBoardCards} isPc={isPc} height={contentHeight} windowSize={windowSize} />
         )}
 
       </div>
